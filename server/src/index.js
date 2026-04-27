@@ -15,7 +15,7 @@ const io = new Server(server, {
     }
 });
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
@@ -46,6 +46,6 @@ io.on("connection", (socket) => {
 app.set("io", io);
 
 // Start server
-server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
