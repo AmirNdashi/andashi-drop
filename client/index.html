@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Transfer System</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 40px;
+        }
+
+        .box {
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>📁 Data Transfer System</h1>
+
+    <div class="box">
+    <h2>Session</h2>
+
+    <button onclick="createSession()">Create Session</button>
+
+    <br><br>
+
+    <input type="text" id="sessionInput" placeholder="Enter Session ID" />
+    <input type="text" id="deviceName" placeholder="Device Name" />
+    <button onclick="joinSession()">Join Session</button>
+
+    <p><strong>Current Session:</strong> <span id="currentSession">None</span></p>
+
+    <h3>Connected Devices</h3>
+    <ul id="deviceList"></ul>
+</div>
+
+    <div class="box">
+        <h2>Upload File</h2>
+        <input type="file" id="fileInput" />
+        <button onclick="uploadFile()">Upload</button>
+    </div>
+
+    <div class="box">
+        <h2>Files</h2>
+        <button onclick="loadFiles()">Refresh</button>
+        <ul id="fileList"></ul>
+    </div>
+
+<script>
+const SERVER = "http://localhost:5000";
+
+// Upload file
+async function uploadFile() {
+    const fileInput = document.getElementById("fileInput");
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert("Select a file first");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(`${SERVER}/api/files/upload`, {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await res.json();
+    alert(data.message);
+
+    loadFiles();
+}
+
+// Load files
+async function loadFiles() {
+    const res = await fetch(`${SERVER}/api/files/list`);
+    const files = await res.json();
+
+    const list = document.getElementById("fileList");
+    list.innerHTML = "";
+
+    files.forEach(file => {
+        const li = document.createElement("li");
+
+        li.innerHTML = `
+            ${file.name}
+            <a href="${SERVER}${file.url}" target="_blank">Download</a>
+        `;
+
+        list.appendChild(li);
+    });
+}
+
+// initial load
+loadFiles();
+
+let currentSessionId = null;
+
+// Create session
+async function createSession() {
+    const res = await fetch(`${SERVER}/api/sessions/create`, {
+        method: "POST"
+    });
+
+    const data = await res.json();
+
+    currentSessionId = data.sessionId;
+
+    document.getElementById("currentSession").innerText = currentSessionId;
+
+    alert("Session created: " + currentSessionId);
+}
+
+// Join session
+async function joinSession() {
+    const sessionId = document.getElementById("sessionInput").value;
+    const deviceName = document.getElementById("deviceName").value;
+
+    if (!sessionId) {
+        alert("Enter session ID");
+        return;
+    }
+
+    const res = await fetch(`${SERVER}/api/sessions/join`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            sessionId,
+            deviceName
+        })
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+        alert(data.error);
+        return;
+    }
+
+    currentSessionId = sessionId;
+
+    document.getElementById("currentSession").innerText = sessionId;
+
+    updateDeviceList(data.session.devices);
+}
+
+// Fetch session data
+async function loadSession() {
+    if (!currentSessionId) return;
+
+    const res = await fetch(`${SERVER}/api/sessions/${currentSessionId}`);
+    const data = await res.json();
+
+    updateDeviceList(data.devices);
+}
+
+// Update UI
+function updateDeviceList(devices) {
+    const list = document.getElementById("deviceList");
+    list.innerHTML = "";
+
+    devices.forEach(d => {
+        const li = document.createElement("li");
+        li.innerText = d.name;
+        list.appendChild(li);
+    });
+}
+
+// Auto-refresh session every 3 seconds
+setInterval(loadSession, 3000);
+
+</script>
+
+</body>
+</html>
