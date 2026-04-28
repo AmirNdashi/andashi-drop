@@ -3,12 +3,20 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
+// ✅ All requires at the top
+const { addToInbox, getSession, getInbox } = require("../services/sessionManager");
+
 const router = express.Router();
 
-// Storage config (Ubuntu safe pathing)
+// ✅ Ensure uploads folder exists BEFORE multer is configured
+const uploadDir = path.join(__dirname, "../uploads");
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, "../uploads"));
+        cb(null, uploadDir); // ✅ folder guaranteed to exist
     },
     filename: (req, file, cb) => {
         const uniqueName = Date.now() + "-" + file.originalname;
@@ -18,7 +26,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Upload endpoint
+// ── Upload to session folder ──
 router.post("/upload", upload.single("file"), (req, res) => {
     const { sessionId } = req.body;
 
@@ -26,37 +34,36 @@ router.post("/upload", upload.single("file"), (req, res) => {
         return res.status(400).json({ error: "Session ID required" });
     }
 
-    const sessionPath = path.join(__dirname, "../uploads", sessionId);
+    // ✅ Guard against multer failure
+    if (!req.file) {
+        return res.status(400).json({ error: "No file received" });
+    }
 
-    // Ensure session folder exists
+    const sessionPath = path.join(uploadDir, sessionId);
+
     if (!fs.existsSync(sessionPath)) {
         fs.mkdirSync(sessionPath, { recursive: true });
     }
 
     const oldPath = req.file.path;
     const newPath = path.join(sessionPath, req.file.filename);
-
-    // Move file into session folder
     fs.renameSync(oldPath, newPath);
 
-    res.json({
-        message: "File uploaded to session",
-        filename: req.file.filename
-    });
+    // ✅ Emit before responding
     const io = req.app.get("io");
+    io.to(sessionId).emit("file-uploaded", { filename: req.file.filename });
 
-// Notify all devices in session
-io.to(sessionId).emit("file-uploaded", {
-    filename: req.file.filename
-});
+    res.json({ message: "File uploaded to session", filename: req.file.filename });
 });
 
-const { addToInbox } = require("../services/sessionManager");
-
-const { getSession } = require("../services/sessionManager");
-
+// ── Send file directly to target device(s) ──
 router.post("/send", upload.single("file"), (req, res) => {
-    let { targetSocketIds, sendToOwner, sessionId } = req.body;
+    const { targetSocketIds, sendToOwner, sessionId } = req.body;
+
+    // ✅ Guard against multer failure
+    if (!req.file) {
+        return res.status(400).json({ error: "No file received" });
+    }
 
     const io = req.app.get("io");
 
@@ -67,76 +74,69 @@ router.post("/send", upload.single("file"), (req, res) => {
 
     let targets = [];
 
-    // 🔥 CASE 1: CLIENT → send to owner automatically
     if (sendToOwner === "true") {
-
         const session = getSession(sessionId);
-
         if (!session) {
             return res.status(400).json({ error: "Session not found" });
         }
-
         targets = [session.ownerSocketId];
-    }
-
-    // 🔥 CASE 2: OWNER → send to selected devices
-    else if (targetSocketIds) {
-        targets = JSON.parse(targetSocketIds);
-    }
-
-    // ❌ no valid target
-    else {
+    } else if (targetSocketIds) {
+        try {
+            targets = JSON.parse(targetSocketIds);
+        } catch(e) {
+            return res.status(400).json({ error: "Invalid targetSocketIds format" });
+        }
+    } else {
         return res.status(400).json({ error: "No target specified" });
     }
 
-    // 🚀 SEND TO ALL TARGETS
     targets.forEach(socketId => {
-
-        // Save to inbox
         addToInbox(socketId, fileData);
-
-        // Real-time delivery
         io.to(socketId).emit("receive-file", fileData);
     });
 
     res.json({ message: "File sent successfully" });
 });
 
-const { getInbox } = require("../services/sessionManager");
-
+// ── Inbox ──
 router.get("/inbox/:socketId", (req, res) => {
-    const { socketId } = req.params;
-    const inbox = getInbox(socketId);
+    const inbox = getInbox(req.params.socketId);
     res.json(inbox);
 });
 
+// ── List session files ──
 router.get("/list/:sessionId", (req, res) => {
-    const { sessionId } = req.params;
-
-    const sessionPath = path.join(__dirname, "../uploads", sessionId);
+    const sessionPath = path.join(uploadDir, req.params.sessionId);
 
     if (!fs.existsSync(sessionPath)) {
         return res.json([]);
     }
 
     fs.readdir(sessionPath, (err, files) => {
-        if (err) {
-            return res.status(500).json({ error: "Unable to read files" });
-        }
+        if (err) return res.status(500).json({ error: "Unable to read files" });
 
-        const fileList = files.map(file => ({
+        res.json(files.map(file => ({
             name: file,
-            url: `/api/files/download/${sessionId}/${file}`
-        }));
-
-        res.json(fileList);
+            url: `/api/files/download/${req.params.sessionId}/${file}`
+        })));
     });
 });
 
+// ── Download ──
 router.get("/download/:sessionId/:filename", (req, res) => {
     const { sessionId, filename } = req.params;
+    const filePath = path.join(uploadDir, sessionId, filename);
 
-    const filePath = path.join(__dirname, "../uploads", sessionId, filename);
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: "File not found" });
+    }
+
+    res.download(filePath);
+});
+
+// ── Download inbox file (direct send) ──
+router.get("/download/:filename", (req, res) => {
+    const filePath = path.join(uploadDir, req.params.filename);
 
     if (!fs.existsSync(filePath)) {
         return res.status(404).json({ error: "File not found" });
