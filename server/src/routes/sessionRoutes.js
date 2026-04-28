@@ -1,96 +1,65 @@
 const express = require("express");
-const router = express.Router();
-const QRCode = require("qrcode");
-const os = require("os");
+const router  = express.Router();
+const QRCode  = require("qrcode");
+const os      = require("os");
 
-const { createSession, getSession, addDevice } = require("../services/sessionManager");
+const { createSession, getSession } = require("../services/sessionManager");
 
-// ── Create session ──
+// ── Create session ────────────────────────────────────────
 router.post("/create", (req, res) => {
     const { socketId } = req.body;
-
-    if (!socketId) {
-        return res.status(400).json({ error: "socketId required" });
-    }
+    if (!socketId) return res.status(400).json({ error: "socketId required" });
 
     const sessionId = createSession(socketId);
-
     const io = req.app.get("io");
-
-    // Make owner join the socket room
     io.to(socketId).socketsJoin(sessionId);
 
-    // ✅ Owner is NOT added to session.devices — devices list is guests only
     res.json({ sessionId });
 });
 
-// ── Join session ──
+// ── Join session ──────────────────────────────────────────
 router.post("/join", (req, res) => {
     const { sessionId, deviceName, socketId } = req.body;
-
     const session = getSession(sessionId);
 
-    if (!session) {
-        return res.status(404).json({ error: "Session not found" });
-    }
+    if (!session) return res.status(404).json({ error: "Session not found" });
+    if (socketId === session.ownerSocketId) return res.json({ message: "You are the owner" });
 
-    // ✅ Block owner from joining as a guest device
-    if (socketId === session.ownerSocketId) {
-        return res.json({ message: "You are the owner" });
-    }
-
-    // Prevent duplicate entries
     const exists = session.devices.find(d => d.socketId === socketId);
-    if (!exists) {
-        session.devices.push({ socketId, name: deviceName });
-    }
+    if (!exists) session.devices.push({ socketId, name: deviceName });
 
     const io = req.app.get("io");
-
-    // Guest joins socket room
     io.to(socketId).socketsJoin(sessionId);
-
-    // ✅ Notify ONLY the owner about the updated device list
     io.to(session.ownerSocketId).emit("device-update", session.devices);
 
     res.json({ message: "Joined session successfully" });
 });
 
-// ── Get session info ──
+// ── Get session info ──────────────────────────────────────
 router.get("/:id", (req, res) => {
     const session = getSession(req.params.id);
-    if (!session) {
-        return res.status(404).json({ error: "Not found" });
-    }
+    if (!session) return res.status(404).json({ error: "Not found" });
     res.json(session);
 });
 
-// ── QR code generation ──
+// ── QR code ───────────────────────────────────────────────
 function getLocalIP() {
     const interfaces = os.networkInterfaces();
     for (let name of Object.keys(interfaces)) {
         for (let net of interfaces[name]) {
-            if (net.family === "IPv4" && !net.internal) {
-                return net.address;
-            }
+            if (net.family === "IPv4" && !net.internal) return net.address;
         }
     }
     return "localhost";
 }
 
 router.get("/qr/:sessionId", async (req, res) => {
-    const { sessionId } = req.params;
-
-    // ✅ Use Railway URL in production, local IP in development
     const baseUrl = process.env.BASE_URL || `http://${getLocalIP()}:5000`;
-
-    const url = `${baseUrl}/?session=${sessionId}`;
-
+    const url = `${baseUrl}/?session=${req.params.sessionId}`;
     try {
         const qrImage = await QRCode.toDataURL(url);
         res.json({ qr: qrImage, url });
-    } catch (err) {
-        console.error("QR error:", err);
+    } catch(err) {
         res.status(500).json({ error: "QR generation failed" });
     }
 });

@@ -1,0 +1,28 @@
+{
+    "name": "ANDASHI-DROP",
+    "short_name": "A-DROP",
+    "description": "Secure instant file transfer by ANDASHI",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#030810",
+    "theme_color": "#00b4ff",
+    "orientation": "any",
+    "scope": "/",
+    "lang": "en",
+    "icons": [
+        { "src": "/img/my_logo2.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+        { "src": "/img/my_logo2.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    ],
+    "shortcuts": [
+        {
+            "name": "Create Session",
+            "url": "/?action=create",
+            "icons": [{ "src": "/img/my_logo2.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "OS Transfer",
+            "url": "/?action=ostransfer",
+            "icons": [{ "src": "/img/my_logo2.png", "sizes": "192x192" }]
+        }
+    ]
+}

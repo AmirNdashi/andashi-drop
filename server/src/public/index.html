@@ -3,375 +3,296 @@
 <head>
     <link rel="icon" type="image/png" href="img/my_logo2.png">
     <link rel="apple-touch-icon" href="img/my_logo2.png">
-    <title>ANDASHI-DROP — Data Transfer System</title>
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#00b4ff" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="A-DROP" />
+    <title>ANDASHI-DROP</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@0,300;0,400;0,500&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
         :root {
-            --bg: #030810;
-            --surface: #080f1e;
-            --surface2: #0d1829;
+            --bg: #030810; --surface: #080f1e; --surface2: #0d1829;
             --border: rgba(0,180,255,0.08);
-            --accent: #00b4ff;
-            --accent2: #00e5ff;
-            --accent3: #00ffd4;
-            --text: #e8f4ff;
-            --text-muted: #3a6080;
-            --text-dim: #7ab0cc;
-            --danger: #ff6b7a;
+            --accent: #00b4ff; --accent2: #00e5ff; --accent3: #00ffd4;
+            --text: #e8f4ff; --text-muted: #3a6080; --text-dim: #7ab0cc;
+            --danger: #ff6b7a; --os-color: #a78bfa; --os-color2: #c4b5fd;
         }
-
         html { scroll-behavior: smooth; }
-
-        body {
-            font-family: 'DM Sans', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
         body::before {
-            content: '';
-            position: fixed; inset: 0;
+            content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
             background:
                 radial-gradient(ellipse 70% 50% at 15% 5%, rgba(0,120,200,0.14) 0%, transparent 60%),
                 radial-gradient(ellipse 50% 40% at 85% 85%, rgba(0,229,255,0.07) 0%, transparent 60%),
                 radial-gradient(ellipse 35% 30% at 50% 40%, rgba(0,255,212,0.04) 0%, transparent 50%);
-            pointer-events: none; z-index: 0;
         }
+        .orb { position: fixed; border-radius: 50%; filter: blur(90px); pointer-events: none; z-index: 0; animation: float-orb 14s ease-in-out infinite; }
+        .orb-1 { width:500px; height:500px; background:rgba(0,100,180,0.08); top:-150px; left:-150px; }
+        .orb-2 { width:350px; height:350px; background:rgba(0,229,255,0.05); bottom:-100px; right:-100px; animation-delay:-7s; }
+        .orb-3 { width:200px; height:200px; background:rgba(0,255,212,0.04); top:50%; left:60%; animation-delay:-3s; animation-duration:18s; }
+        @keyframes float-orb { 0%,100%{transform:translate(0,0) scale(1);} 50%{transform:translate(25px,18px) scale(1.05);} }
 
-        .orb {
-            position: fixed; border-radius: 50%; filter: blur(90px);
-            pointer-events: none; z-index: 0;
-            animation: float-orb 14s ease-in-out infinite;
-        }
-        .orb-1 { width: 500px; height: 500px; background: rgba(0,100,180,0.08); top: -150px; left: -150px; }
-        .orb-2 { width: 350px; height: 350px; background: rgba(0,229,255,0.05); bottom: -100px; right: -100px; animation-delay: -7s; }
-        .orb-3 { width: 200px; height: 200px; background: rgba(0,255,212,0.04); top: 50%; left: 60%; animation-delay: -3s; animation-duration: 18s; }
-        @keyframes float-orb {
-            0%,100% { transform: translate(0,0) scale(1); }
-            50%      { transform: translate(25px,18px) scale(1.05); }
-        }
-
-        /* ── Layout ── */
-        .wrapper {
-            position: relative; z-index: 1;
-            max-width: 1000px; margin: 0 auto;
-            padding: 32px 20px 64px;
-        }
+        .wrapper { position:relative; z-index:1; max-width:1000px; margin:0 auto; padding:32px 20px 64px; }
 
         /* ── Header ── */
-        header {
-            display: flex; align-items: center; gap: 20px;
-            margin-bottom: 36px;
-            animation: slide-down 0.7s cubic-bezier(0.16,1,0.3,1) both;
-        }
-
+        header { display:flex; align-items:center; gap:20px; margin-bottom:36px; animation:slide-down 0.7s cubic-bezier(0.16,1,0.3,1) both; }
         .logo-img {
-            width: clamp(90px, 15vw, 140px);
-            height: clamp(90px, 15vw, 140px);
-            object-fit: contain; flex-shrink: 0;
-            filter:
-                drop-shadow(0 0 24px rgba(0,180,255,1))
-                drop-shadow(0 0 55px rgba(0,229,255,0.65))
-                drop-shadow(0 0 90px rgba(0,150,255,0.4));
-            animation: logo-pulse 3.5s ease-in-out infinite;
+            width:clamp(90px,15vw,140px); height:clamp(90px,15vw,140px);
+            object-fit:contain; flex-shrink:0;
+            filter: drop-shadow(0 0 24px rgba(0,180,255,1)) drop-shadow(0 0 55px rgba(0,229,255,0.65)) drop-shadow(0 0 90px rgba(0,150,255,0.4));
+            animation:logo-pulse 3.5s ease-in-out infinite;
         }
         @keyframes logo-pulse {
-            0%,100% {
-                filter:
-                    drop-shadow(0 0 24px rgba(0,180,255,1))
-                    drop-shadow(0 0 55px rgba(0,229,255,0.65))
-                    drop-shadow(0 0 90px rgba(0,150,255,0.4));
-                transform: scale(1);
-            }
-            50% {
-                filter:
-                    drop-shadow(0 0 36px rgba(0,210,255,1))
-                    drop-shadow(0 0 80px rgba(0,240,255,0.85))
-                    drop-shadow(0 0 130px rgba(0,180,255,0.6));
-                transform: scale(1.05);
-            }
+            0%,100%{ filter:drop-shadow(0 0 24px rgba(0,180,255,1)) drop-shadow(0 0 55px rgba(0,229,255,0.65)) drop-shadow(0 0 90px rgba(0,150,255,0.4)); transform:scale(1); }
+            50%    { filter:drop-shadow(0 0 36px rgba(0,210,255,1)) drop-shadow(0 0 80px rgba(0,240,255,0.85)) drop-shadow(0 0 130px rgba(0,180,255,0.6)); transform:scale(1.05); }
         }
+        .logo-text-wrap { display:flex; flex-direction:column; gap:3px; min-width:0; }
+        .logo-text { font-family:'Syne',sans-serif; font-size:clamp(16px,3.5vw,24px); font-weight:800; letter-spacing:1px; line-height:1; }
+        .logo-text .brand { color:var(--text); }
+        .logo-text .dash  { color:var(--text-muted); margin:0 1px; }
+        .logo-text .product { background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .logo-sub { font-size:clamp(7px,1.4vw,10px); letter-spacing:2.5px; text-transform:uppercase; color:var(--text-muted); }
+        .header-actions { margin-left:auto; display:flex; align-items:center; gap:8px; flex-shrink:0; }
+        .status-pill { display:flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--border); border-radius:100px; padding:7px 14px; font-size:clamp(10px,1.5vw,12px); color:var(--text-dim); white-space:nowrap; }
+        .status-dot { width:7px; height:7px; border-radius:50%; background:var(--text-muted); flex-shrink:0; transition:background 0.4s,box-shadow 0.4s; }
+        .status-dot.connected { background:var(--accent3); box-shadow:0 0 8px var(--accent3); animation:pulse-dot 2s ease-in-out infinite; }
+        @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
 
-        .logo-text-wrap { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-        .logo-text {
-            font-family: 'Syne', sans-serif;
-            font-size: clamp(16px, 3.5vw, 24px);
-            font-weight: 800; letter-spacing: 1px; line-height: 1;
+        /* ── OS Transfer trigger button ── */
+        .btn-os-trigger {
+            display:flex; align-items:center; gap:6px;
+            background:linear-gradient(135deg,rgba(167,139,250,0.15),rgba(196,181,253,0.08));
+            border:1px solid rgba(167,139,250,0.3); border-radius:100px;
+            padding:7px 14px; font-size:12px; font-weight:600;
+            color:var(--os-color); cursor:pointer; white-space:nowrap;
+            transition:all 0.2s; font-family:'DM Sans',sans-serif;
         }
-        .logo-text .brand { color: var(--text); }
-        .logo-text .dash  { color: var(--text-muted); margin: 0 1px; }
-        .logo-text .product {
-            background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-        }
-        .logo-sub {
-            font-size: clamp(7px, 1.4vw, 10px);
-            letter-spacing: 2.5px; text-transform: uppercase; color: var(--text-muted);
-        }
+        .btn-os-trigger:hover { background:rgba(167,139,250,0.2); border-color:rgba(167,139,250,0.5); box-shadow:0 0 20px rgba(167,139,250,0.2); }
+        .btn-os-trigger:active { transform:scale(0.97); }
 
-        .status-pill {
-            margin-left: auto; display: flex; align-items: center; gap: 7px;
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: 100px; padding: 7px 14px;
-            font-size: clamp(10px, 1.5vw, 12px); color: var(--text-dim);
-            white-space: nowrap; flex-shrink: 0;
-        }
-        .status-dot {
-            width: 7px; height: 7px; border-radius: 50%;
-            background: var(--text-muted); flex-shrink: 0;
-            transition: background 0.4s, box-shadow 0.4s;
-        }
-        .status-dot.connected {
-            background: var(--accent3); box-shadow: 0 0 8px var(--accent3);
-            animation: pulse-dot 2s ease-in-out infinite;
-        }
-        @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+        /* ── Install button ── */
+        #installBtn { display:none; align-items:center; gap:6px; background:transparent; border:1px solid rgba(0,229,255,0.2); border-radius:100px; padding:7px 14px; font-size:11px; color:var(--accent2); cursor:pointer; white-space:nowrap; font-family:'DM Sans',sans-serif; transition:all 0.2s; }
+        #installBtn:hover { border-color:var(--accent2); background:rgba(0,229,255,0.06); }
 
         /* ── Grid ── */
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-
-        @media (max-width: 700px) {
-            .grid { grid-template-columns: 1fr; }
-            .wrapper { padding: 20px 14px 48px; }
-            header { margin-bottom: 24px; }
-        }
-        @media (max-width: 380px) {
-            .logo-img { width: 72px; height: 72px; }
-            .status-pill { padding: 5px 10px; gap: 5px; }
-        }
+        .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        @media(max-width:700px){ .grid{grid-template-columns:1fr;} .wrapper{padding:20px 14px 48px;} header{margin-bottom:24px;} .header-actions{gap:5px;} }
+        @media(max-width:380px){ .logo-img{width:72px;height:72px;} .status-pill{padding:5px 10px;} .btn-os-trigger,.install-btn{display:none;} }
 
         /* ── Cards ── */
-        .card {
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: 20px; padding: 22px;
-            transition: border-color 0.35s, box-shadow 0.35s;
-            animation: fade-up 0.55s cubic-bezier(0.16,1,0.3,1) both;
-            position: relative; overflow: hidden;
-        }
-        .card::before {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(0,180,255,0.22), transparent);
-        }
-        .card::after {
-            content: ''; position: absolute; inset: 0; border-radius: 20px;
-            background: linear-gradient(135deg, rgba(0,180,255,0.025) 0%, transparent 50%);
-            pointer-events: none;
-        }
-        .card:hover { border-color: rgba(0,180,255,0.18); box-shadow: 0 0 40px rgba(0,180,255,0.06); }
-        .card:nth-child(1) { animation-delay: 0.08s; }
-        .card:nth-child(2) { animation-delay: 0.14s; }
-        .card:nth-child(3) { animation-delay: 0.20s; }
-        .card:nth-child(4) { animation-delay: 0.26s; }
-
-        .card-label {
-            font-size: 10px; font-weight: 500; letter-spacing: 2.5px;
-            text-transform: uppercase; color: var(--accent);
-            margin-bottom: 12px; display: flex; align-items: center; gap: 7px; opacity: 0.7;
-        }
-        .card-label::before { content: ''; width: 12px; height: 1px; background: var(--accent); }
-        .card-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+        .card { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:22px; transition:border-color 0.35s,box-shadow 0.35s; animation:fade-up 0.55s cubic-bezier(0.16,1,0.3,1) both; position:relative; overflow:hidden; }
+        .card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(0,180,255,0.22),transparent); }
+        .card::after  { content:''; position:absolute; inset:0; border-radius:20px; background:linear-gradient(135deg,rgba(0,180,255,0.025) 0%,transparent 50%); pointer-events:none; }
+        .card:hover { border-color:rgba(0,180,255,0.18); box-shadow:0 0 40px rgba(0,180,255,0.06); }
+        .card:nth-child(1){animation-delay:0.08s;} .card:nth-child(2){animation-delay:0.14s;} .card:nth-child(3){animation-delay:0.20s;} .card:nth-child(4){animation-delay:0.26s;}
+        .card-label { font-size:10px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--accent); margin-bottom:12px; display:flex; align-items:center; gap:7px; opacity:0.7; }
+        .card-label::before { content:''; width:12px; height:1px; background:var(--accent); }
+        .card-title { font-family:'Syne',sans-serif; font-size:17px; font-weight:700; margin-bottom:16px; }
 
         /* ── Buttons ── */
-        .btn {
-            display: inline-flex; align-items: center; justify-content: center;
-            gap: 7px; padding: 11px 18px; border-radius: 11px;
-            font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
-            cursor: pointer; border: none;
-            transition: all 0.22s cubic-bezier(0.16,1,0.3,1);
-        }
-        .btn:active { transform: scale(0.97); }
-        .btn-primary {
-            background: linear-gradient(135deg, #0080cc, var(--accent), var(--accent2));
-            color: #fff; width: 100%; font-weight: 600;
-            box-shadow: 0 4px 20px rgba(0,180,255,0.28), 0 0 0 1px rgba(0,229,255,0.08);
-        }
-        .btn-primary:hover {
-            box-shadow: 0 6px 28px rgba(0,180,255,0.48), 0 0 0 1px rgba(0,229,255,0.18);
-            transform: translateY(-1px);
-        }
-        .btn-secondary {
-            background: var(--surface2); color: var(--text-dim);
-            border: 1px solid var(--border); width: 100%;
-        }
-        .btn-secondary:hover { border-color: rgba(0,180,255,0.25); color: var(--text); background: rgba(0,180,255,0.05); }
-        .btn-ghost {
-            background: transparent; color: var(--accent2);
-            border: 1px solid rgba(0,229,255,0.15); font-size: 12px; padding: 6px 12px;
-        }
-        .btn-ghost:hover { border-color: var(--accent2); background: rgba(0,229,255,0.05); }
+        .btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:11px 18px; border-radius:11px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; cursor:pointer; border:none; transition:all 0.22s cubic-bezier(0.16,1,0.3,1); }
+        .btn:active { transform:scale(0.97); }
+        .btn-primary { background:linear-gradient(135deg,#0080cc,var(--accent),var(--accent2)); color:#fff; width:100%; font-weight:600; box-shadow:0 4px 20px rgba(0,180,255,0.28); }
+        .btn-primary:hover { box-shadow:0 6px 28px rgba(0,180,255,0.48); transform:translateY(-1px); }
+        .btn-secondary { background:var(--surface2); color:var(--text-dim); border:1px solid var(--border); width:100%; }
+        .btn-secondary:hover { border-color:rgba(0,180,255,0.25); color:var(--text); background:rgba(0,180,255,0.05); }
+        .btn-ghost { background:transparent; color:var(--accent2); border:1px solid rgba(0,229,255,0.15); font-size:12px; padding:6px 12px; }
+        .btn-ghost:hover { border-color:var(--accent2); background:rgba(0,229,255,0.05); }
 
         /* ── Inputs ── */
-        .input-group { margin-bottom: 11px; }
-        .input-label { display: block; font-size: 10px; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
-        .input {
-            width: 100%; background: var(--surface2); border: 1px solid var(--border);
-            border-radius: 10px; padding: 10px 13px; color: var(--text);
-            font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-        }
-        .input::placeholder { color: var(--text-muted); }
-        .input:focus { border-color: var(--accent); background: rgba(0,180,255,0.04); box-shadow: 0 0 0 3px rgba(0,180,255,0.1); }
+        .input-group { margin-bottom:11px; }
+        .input-label { display:block; font-size:10px; color:var(--text-muted); margin-bottom:6px; letter-spacing:1px; text-transform:uppercase; }
+        .input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:10px 13px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; outline:none; transition:border-color 0.2s,box-shadow 0.2s; }
+        .input::placeholder { color:var(--text-muted); }
+        .input:focus { border-color:var(--accent); background:rgba(0,180,255,0.04); box-shadow:0 0 0 3px rgba(0,180,255,0.1); }
 
         /* ── Session badge ── */
-        .session-badge {
-            display: flex; align-items: center; gap: 10px;
-            background: linear-gradient(135deg, rgba(0,180,255,0.07), rgba(0,229,255,0.03));
-            border: 1px solid rgba(0,180,255,0.15); border-radius: 12px;
-            padding: 11px 13px; margin-bottom: 14px;
-        }
-        .session-badge-icon {
-            width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
-            background: linear-gradient(135deg, rgba(0,180,255,0.2), rgba(0,229,255,0.1));
-            border: 1px solid rgba(0,180,255,0.2);
-            display: flex; align-items: center; justify-content: center; font-size: 14px;
-        }
-        .session-badge-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px; }
-        .session-badge-value {
-            font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
-            background: linear-gradient(90deg, var(--accent), var(--accent2));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-            word-break: break-all;
-        }
+        .session-badge { display:flex; align-items:center; gap:10px; background:linear-gradient(135deg,rgba(0,180,255,0.07),rgba(0,229,255,0.03)); border:1px solid rgba(0,180,255,0.15); border-radius:12px; padding:11px 13px; margin-bottom:14px; }
+        .session-badge-icon { width:32px; height:32px; border-radius:9px; flex-shrink:0; background:linear-gradient(135deg,rgba(0,180,255,0.2),rgba(0,229,255,0.1)); border:1px solid rgba(0,180,255,0.2); display:flex; align-items:center; justify-content:center; font-size:14px; }
+        .session-badge-label { font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:2px; }
+        .session-badge-value { font-family:'Syne',sans-serif; font-size:13px; font-weight:700; background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; word-break:break-all; }
 
         /* ── QR ── */
-        .qr-container {
-            display: none; flex-direction: column; align-items: center; gap: 13px;
-            padding: 18px; background: rgba(0,180,255,0.03);
-            border: 1px dashed rgba(0,180,255,0.2); border-radius: 15px; margin-top: 14px;
-            animation: pop-in 0.45s cubic-bezier(0.16,1,0.3,1) both;
-        }
-        .qr-container.visible { display: flex; }
-        .qr-frame { padding: 10px; background: white; border-radius: 12px; box-shadow: 0 0 0 1px rgba(0,180,255,0.3), 0 0 36px rgba(0,180,255,0.2); }
-        .qr-frame img { display: block; width: min(140px, 38vw); height: min(140px, 38vw); border-radius: 4px; }
-        .qr-hint { font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6; }
-        .qr-hint strong { color: var(--accent2); }
+        .qr-container { display:none; flex-direction:column; align-items:center; gap:13px; padding:18px; background:rgba(0,180,255,0.03); border:1px dashed rgba(0,180,255,0.2); border-radius:15px; margin-top:14px; animation:pop-in 0.45s cubic-bezier(0.16,1,0.3,1) both; }
+        .qr-container.visible { display:flex; }
+        .qr-frame { padding:10px; background:white; border-radius:12px; box-shadow:0 0 0 1px rgba(0,180,255,0.3),0 0 36px rgba(0,180,255,0.2); }
+        .qr-frame img { display:block; width:min(140px,38vw); height:min(140px,38vw); border-radius:4px; }
+        .qr-hint { font-size:11px; color:var(--text-muted); text-align:center; line-height:1.6; }
+        .qr-hint strong { color:var(--accent2); }
 
         /* ── Devices ── */
-        #devicesSection { display: none; }
-        #devicesSection.visible { display: block; }
-
-        .device-list { list-style: none; display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
-        .device-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 9px 11px; background: var(--surface2);
-            border: 1px solid var(--border); border-radius: 10px;
-            animation: slide-in 0.3s cubic-bezier(0.16,1,0.3,1) both;
-            font-size: 13px; color: var(--text-dim);
-        }
-        .device-avatar {
-            width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
-            background: linear-gradient(135deg, rgba(0,100,180,0.5), rgba(0,180,255,0.3));
-            border: 1px solid rgba(0,180,255,0.2);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 12px; font-weight: 700; color: var(--accent2); font-family: 'Syne', sans-serif;
-        }
-        .device-count {
-            font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800;
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-        }
+        #devicesSection { display:none; }
+        #devicesSection.visible { display:block; }
+        .device-list { list-style:none; display:flex; flex-direction:column; gap:7px; margin-top:10px; }
+        .device-item { display:flex; align-items:center; gap:10px; padding:9px 11px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; animation:slide-in 0.3s cubic-bezier(0.16,1,0.3,1) both; font-size:13px; color:var(--text-dim); }
+        .device-avatar { width:28px; height:28px; border-radius:7px; flex-shrink:0; background:linear-gradient(135deg,rgba(0,100,180,0.5),rgba(0,180,255,0.3)); border:1px solid rgba(0,180,255,0.2); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--accent2); font-family:'Syne',sans-serif; }
+        .device-count { font-family:'Syne',sans-serif; font-size:26px; font-weight:800; background:linear-gradient(135deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 
         /* ── Upload zone ── */
-        .upload-zone {
-            border: 2px dashed rgba(0,180,255,0.15); border-radius: 13px;
-            padding: 26px 14px; text-align: center; cursor: pointer;
-            transition: all 0.3s; margin-bottom: 11px; position: relative;
-            background: rgba(0,180,255,0.015);
-        }
-        .upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); background: rgba(0,180,255,0.05); }
-        .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-        .upload-icon { font-size: 28px; margin-bottom: 8px; display: block; transition: transform 0.3s; filter: drop-shadow(0 0 8px rgba(0,180,255,0.3)); }
-        .upload-zone:hover .upload-icon { transform: translateY(-4px); }
-        .upload-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--text-dim); }
-        .upload-sub { font-size: 11px; color: var(--text-muted); }
-
-        .selected-file {
-            display: none; align-items: center; gap: 8px;
-            padding: 9px 12px; background: rgba(0,180,255,0.07);
-            border: 1px solid rgba(0,180,255,0.18); border-radius: 10px;
-            margin-bottom: 10px; font-size: 13px; color: var(--accent2);
-            animation: slide-in 0.3s both; min-width: 0;
-        }
-        .selected-file.visible { display: flex; }
-        .selected-file span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .upload-zone { border:2px dashed rgba(0,180,255,0.15); border-radius:13px; padding:26px 14px; text-align:center; cursor:pointer; transition:all 0.3s; margin-bottom:11px; position:relative; background:rgba(0,180,255,0.015); }
+        .upload-zone:hover,.upload-zone.drag-over { border-color:var(--accent); background:rgba(0,180,255,0.05); }
+        .upload-zone input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+        .upload-icon { font-size:28px; margin-bottom:8px; display:block; transition:transform 0.3s; filter:drop-shadow(0 0 8px rgba(0,180,255,0.3)); }
+        .upload-zone:hover .upload-icon { transform:translateY(-4px); }
+        .upload-title { font-family:'Syne',sans-serif; font-size:13px; font-weight:600; margin-bottom:4px; color:var(--text-dim); }
+        .upload-sub { font-size:11px; color:var(--text-muted); }
+        .selected-file { display:none; align-items:center; gap:8px; padding:9px 12px; background:rgba(0,180,255,0.07); border:1px solid rgba(0,180,255,0.18); border-radius:10px; margin-bottom:10px; font-size:13px; color:var(--accent2); animation:slide-in 0.3s both; min-width:0; }
+        .selected-file.visible { display:flex; }
+        .selected-file span:last-child { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 
         /* ── Progress ── */
-        .progress-wrap { display: none; height: 3px; background: var(--surface2); border-radius: 100px; overflow: hidden; margin-bottom: 10px; }
-        .progress-wrap.visible { display: block; }
-        .progress-bar {
-            height: 100%; width: 0%; border-radius: 100px; transition: width 0.3s;
-            background: linear-gradient(90deg, #0080cc, var(--accent), var(--accent2), var(--accent3));
-            background-size: 200% 100%;
-            animation: gradient-flow 2s linear infinite;
-        }
-        @keyframes gradient-flow { 0% { background-position:0% 0%; } 100% { background-position:200% 0%; } }
+        .progress-wrap { display:none; height:3px; background:var(--surface2); border-radius:100px; overflow:hidden; margin-bottom:10px; }
+        .progress-wrap.visible { display:block; }
+        .progress-bar { height:100%; width:0%; border-radius:100px; transition:width 0.3s; background:linear-gradient(90deg,#0080cc,var(--accent),var(--accent2),var(--accent3)); background-size:200% 100%; animation:gradient-flow 2s linear infinite; }
+        @keyframes gradient-flow { 0%{background-position:0% 0%;} 100%{background-position:200% 0%;} }
 
         /* ── Files list ── */
-        .files-list { list-style: none; display: flex; flex-direction: column; gap: 7px; margin-top: 8px; }
-        .file-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px 12px; background: var(--surface2);
-            border: 1px solid var(--border); border-radius: 11px;
-            transition: border-color 0.2s, transform 0.2s;
-            animation: slide-in 0.3s cubic-bezier(0.16,1,0.3,1) both;
+        .files-list { list-style:none; display:flex; flex-direction:column; gap:7px; margin-top:8px; }
+        .file-item { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:11px; transition:border-color 0.2s,transform 0.2s; animation:slide-in 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+        .file-item:hover { border-color:rgba(0,180,255,0.2); transform:translateX(2px); }
+        .file-icon-wrap { width:32px; height:32px; border-radius:8px; flex-shrink:0; background:var(--surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:14px; }
+        .file-info { flex:1; min-width:0; }
+        .file-name { font-size:12px; font-weight:500; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .file-download { font-size:11px; color:var(--accent); text-decoration:none; padding:5px 10px; border:1px solid rgba(0,180,255,0.18); border-radius:7px; transition:all 0.2s; white-space:nowrap; flex-shrink:0; }
+        .file-download:hover { background:rgba(0,180,255,0.1); border-color:var(--accent); color:var(--accent2); }
+        .empty-state { text-align:center; padding:26px 14px; color:var(--text-muted); font-size:12px; }
+        .empty-state-icon { font-size:26px; margin-bottom:7px; display:block; opacity:0.35; }
+
+        /* ── Misc ── */
+        .divider { display:flex; align-items:center; gap:10px; margin:12px 0; color:var(--text-muted); font-size:11px; }
+        .divider::before,.divider::after { content:''; flex:1; height:1px; background:var(--border); }
+        .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:2px; }
+        .spinner { width:14px; height:14px; border:2px solid rgba(255,255,255,0.15); border-top-color:white; border-radius:50%; animation:spin 0.7s linear infinite; display:none; }
+        .spinner.visible { display:block; }
+        @keyframes spin { to{transform:rotate(360deg);} }
+        #toast-container { position:fixed; top:16px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
+        .toast { display:flex; align-items:center; gap:9px; background:var(--surface2); border:1px solid var(--border); border-radius:13px; padding:11px 15px; font-size:13px; color:var(--text); box-shadow:0 8px 32px rgba(0,0,0,0.5); animation:toast-in 0.4s cubic-bezier(0.16,1,0.3,1) both; max-width:min(280px,calc(100vw - 32px)); }
+        .toast.success{border-color:rgba(0,255,212,0.25);} .toast.error{border-color:rgba(255,107,122,0.3);}
+        .toast-icon { font-size:14px; flex-shrink:0; }
+        @keyframes toast-in  { from{opacity:0;transform:translateX(20px) scale(0.94);} to{opacity:1;transform:translateX(0) scale(1);} }
+        @keyframes toast-out { to{opacity:0;transform:translateX(20px) scale(0.94);} }
+        .error-text { color:var(--danger); font-size:11px; margin-top:7px; display:none; }
+        .error-text.visible { display:block; }
+        @keyframes slide-down { from{opacity:0;transform:translateY(-20px);} to{opacity:1;transform:translateY(0);} }
+        @keyframes fade-up    { from{opacity:0;transform:translateY(24px);}  to{opacity:1;transform:translateY(0);} }
+        @keyframes pop-in     { from{opacity:0;transform:scale(0.9);}        to{opacity:1;transform:scale(1);}    }
+        @keyframes slide-in   { from{opacity:0;transform:translateX(-12px);} to{opacity:1;transform:translateX(0);} }
+
+        /* ══════════════════════════════════════════════════
+           OS TRANSFER MODAL
+        ══════════════════════════════════════════════════ */
+        .modal-backdrop {
+            position:fixed; inset:0; background:rgba(3,8,16,0.85);
+            backdrop-filter:blur(8px); z-index:1000;
+            display:none; align-items:center; justify-content:center; padding:20px;
         }
-        .file-item:hover { border-color: rgba(0,180,255,0.2); transform: translateX(2px); }
-        .file-icon-wrap {
-            width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
-            background: var(--surface); border: 1px solid var(--border);
-            display: flex; align-items: center; justify-content: center; font-size: 14px;
+        .modal-backdrop.open { display:flex; animation:backdrop-in 0.3s ease both; }
+        @keyframes backdrop-in { from{opacity:0;} to{opacity:1;} }
+
+        .modal {
+            background:var(--surface); border:1px solid rgba(167,139,250,0.2);
+            border-radius:24px; width:100%; max-width:520px;
+            max-height:90vh; overflow-y:auto;
+            animation:modal-in 0.4s cubic-bezier(0.16,1,0.3,1) both;
+            position:relative;
         }
-        .file-info { flex: 1; min-width: 0; }
-        .file-name { font-size: 12px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .file-download {
-            font-size: 11px; color: var(--accent); text-decoration: none;
-            padding: 5px 10px; border: 1px solid rgba(0,180,255,0.18); border-radius: 7px;
-            transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
+        .modal::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(167,139,250,0.4),transparent); border-radius:24px 24px 0 0; }
+        @keyframes modal-in { from{opacity:0;transform:scale(0.93) translateY(20px);} to{opacity:1;transform:scale(1) translateY(0);} }
+
+        .modal-header {
+            display:flex; align-items:center; justify-content:space-between;
+            padding:24px 24px 0;
         }
-        .file-download:hover { background: rgba(0,180,255,0.1); border-color: var(--accent); color: var(--accent2); }
+        .modal-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; }
+        .modal-title .os-grad { background:linear-gradient(90deg,var(--os-color),var(--os-color2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .modal-close { background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; padding:4px 8px; border-radius:8px; transition:all 0.2s; }
+        .modal-close:hover { color:var(--text); background:var(--surface2); }
 
-        .empty-state { text-align: center; padding: 26px 14px; color: var(--text-muted); font-size: 12px; }
-        .empty-state-icon { font-size: 26px; margin-bottom: 7px; display: block; opacity: 0.35; }
+        .modal-body { padding:20px 24px 24px; }
 
-        /* ── Divider ── */
-        .divider { display: flex; align-items: center; gap: 10px; margin: 12px 0; color: var(--text-muted); font-size: 11px; }
-        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
-
-        /* ── Spinner ── */
-        .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.15); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
-        .spinner.visible { display: block; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ── Toast ── */
-        #toast-container { position: fixed; top: 16px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
-        .toast {
-            display: flex; align-items: center; gap: 9px;
-            background: var(--surface2); border: 1px solid var(--border); border-radius: 13px;
-            padding: 11px 15px; font-size: 13px; color: var(--text);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-            animation: toast-in 0.4s cubic-bezier(0.16,1,0.3,1) both;
-            max-width: min(280px, calc(100vw - 32px));
+        /* Tab switcher */
+        .os-tabs { display:flex; gap:8px; margin-bottom:20px; }
+        .os-tab {
+            flex:1; padding:10px; border-radius:10px; border:1px solid var(--border);
+            background:var(--surface2); color:var(--text-muted); font-size:13px;
+            font-weight:500; cursor:pointer; text-align:center; transition:all 0.2s;
+            font-family:'DM Sans',sans-serif;
         }
-        .toast.success { border-color: rgba(0,255,212,0.25); }
-        .toast.error   { border-color: rgba(255,107,122,0.3); }
-        .toast-icon { font-size: 14px; flex-shrink: 0; }
-        @keyframes toast-in  { from { opacity:0; transform:translateX(20px) scale(0.94); } to { opacity:1; transform:translateX(0) scale(1); } }
-        @keyframes toast-out { to   { opacity:0; transform:translateX(20px) scale(0.94); } }
+        .os-tab:hover { border-color:rgba(167,139,250,0.3); color:var(--text); }
+        .os-tab.active {
+            background:rgba(167,139,250,0.12); border-color:rgba(167,139,250,0.4);
+            color:var(--os-color2);
+            box-shadow:0 0 20px rgba(167,139,250,0.1);
+        }
 
-        .error-text { color: var(--danger); font-size: 11px; margin-top: 7px; display: none; }
-        .error-text.visible { display: block; }
+        /* Tab panels */
+        .os-panel { display:none; }
+        .os-panel.active { display:block; animation:fade-up 0.3s cubic-bezier(0.16,1,0.3,1) both; }
 
-        @keyframes slide-down { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes fade-up    { from { opacity:0; transform:translateY(24px);  } to { opacity:1; transform:translateY(0); } }
-        @keyframes pop-in     { from { opacity:0; transform:scale(0.9);        } to { opacity:1; transform:scale(1);    } }
-        @keyframes slide-in   { from { opacity:0; transform:translateX(-12px); } to { opacity:1; transform:translateX(0); } }
+        /* Info box */
+        .os-info {
+            background:rgba(167,139,250,0.06); border:1px solid rgba(167,139,250,0.15);
+            border-radius:12px; padding:14px 16px; margin-bottom:16px; font-size:13px; color:var(--text-dim); line-height:1.7;
+        }
+        .os-info strong { color:var(--os-color2); }
+
+        /* Code display */
+        .os-code-display {
+            background:var(--surface2); border:1px solid rgba(167,139,250,0.2);
+            border-radius:14px; padding:20px; text-align:center; margin:16px 0;
+        }
+        .os-code-label { font-size:10px; color:var(--text-muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:10px; }
+        .os-code-number {
+            font-family:'Syne',sans-serif; font-size:42px; font-weight:800; letter-spacing:8px;
+            background:linear-gradient(90deg,var(--os-color),var(--os-color2));
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+        }
+        .os-code-hint { font-size:11px; color:var(--text-muted); margin-top:8px; }
+
+        /* Steps */
+        .os-steps { display:flex; flex-direction:column; gap:10px; margin:16px 0; }
+        .os-step { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:11px; }
+        .os-step-num { width:24px; height:24px; border-radius:6px; background:linear-gradient(135deg,rgba(167,139,250,0.3),rgba(196,181,253,0.15)); border:1px solid rgba(167,139,250,0.25); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--os-color2); flex-shrink:0; font-family:'Syne',sans-serif; }
+        .os-step-text { font-size:13px; color:var(--text-dim); line-height:1.5; }
+        .os-step-text strong { color:var(--text); }
+
+        /* OS upload zone */
+        .os-upload-zone {
+            border:2px dashed rgba(167,139,250,0.2); border-radius:13px;
+            padding:24px 14px; text-align:center; cursor:pointer;
+            transition:all 0.3s; margin-bottom:12px; position:relative;
+            background:rgba(167,139,250,0.02);
+        }
+        .os-upload-zone:hover,.os-upload-zone.drag-over { border-color:var(--os-color); background:rgba(167,139,250,0.06); }
+        .os-upload-zone input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+
+        /* OS file queue list */
+        .os-queued-files { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+        .os-queued-item { display:flex; align-items:center; gap:8px; padding:8px 10px; background:rgba(167,139,250,0.06); border:1px solid rgba(167,139,250,0.15); border-radius:9px; font-size:12px; color:var(--text-dim); }
+
+        /* Status indicator */
+        .os-status { display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:10px; font-size:13px; margin-top:8px; }
+        .os-status.waiting { background:rgba(167,139,250,0.06); border:1px solid rgba(167,139,250,0.15); color:var(--os-color2); }
+        .os-status.ready   { background:rgba(0,255,212,0.06); border:1px solid rgba(0,255,212,0.2); color:var(--accent3); }
+        .os-status.claimed { background:rgba(0,180,255,0.06); border:1px solid rgba(0,180,255,0.15); color:var(--accent2); }
+
+        /* OS primary button */
+        .btn-os-primary {
+            display:flex; align-items:center; justify-content:center; gap:7px;
+            width:100%; padding:12px 18px; border-radius:11px; border:none;
+            background:linear-gradient(135deg,#7c3aed,var(--os-color),var(--os-color2));
+            color:white; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600;
+            cursor:pointer; box-shadow:0 4px 20px rgba(167,139,250,0.3);
+            transition:all 0.22s cubic-bezier(0.16,1,0.3,1);
+        }
+        .btn-os-primary:hover { box-shadow:0 6px 28px rgba(167,139,250,0.5); transform:translateY(-1px); }
+        .btn-os-primary:active { transform:scale(0.97); }
+        .btn-os-primary:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
     </style>
 </head>
 <body>
@@ -381,407 +302,541 @@
 <div class="orb orb-3"></div>
 <div id="toast-container"></div>
 
-<div class="wrapper">
+<!-- ═══════════════════════════════════════════════════════
+     OS TRANSFER MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="osModal" onclick="closeOsModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
 
-    <header>
-        <img class="logo-img" src="img/my_logo2.png" alt="ANDASHI Logo" onerror="this.style.display='none'" />
-        <div class="logo-text-wrap">
-            <div class="logo-text">
-                <span class="brand">ANDASHI</span><span class="dash">-</span><span class="product">DROP</span>
-            </div>
-            <div class="logo-sub">Secure File Transfer System</div>
-        </div>
-        <div class="status-pill">
-            <div class="status-dot" id="statusDot"></div>
-            <span id="statusText">Connecting…</span>
-        </div>
-    </header>
+    <div class="modal-header">
+      <div class="modal-title">⇄ <span class="os-grad">OS Transfer</span></div>
+      <button class="modal-close" onclick="closeOsModal()">✕</button>
+    </div>
 
-    <div class="grid">
+    <div class="modal-body">
 
-        <!-- Session -->
-        <div class="card">
-            <div class="card-label">01 — Session</div>
-            <div class="card-title">Start or Join</div>
-            <div class="session-badge" id="sessionBadge" style="display:none;">
-                <div class="session-badge-icon">🔗</div>
-                <div style="min-width:0;">
-                    <div class="session-badge-label">Active Session</div>
-                    <div class="session-badge-value" id="currentSession">—</div>
-                </div>
-            </div>
-            <button class="btn btn-primary" onclick="createSession()">
-                <span>✦</span> Create New Session
-                <div class="spinner" id="createSpinner"></div>
-            </button>
-            <div class="divider">or join existing</div>
-            <div class="input-group">
-                <label class="input-label">Session ID</label>
-                <input class="input" type="text" id="sessionInput" placeholder="Enter session ID…" />
-            </div>
-            <button class="btn btn-secondary" onclick="joinSession()">
-                <span>→</span> Join Session
-                <div class="spinner" id="joinSpinner"></div>
-            </button>
-            <div class="qr-container" id="qrContainer">
-                <div class="qr-frame"><img id="qrImage" alt="Session QR Code" /></div>
-                <div class="qr-hint">Scan to join on mobile<br><strong>Same network required</strong></div>
-            </div>
-            <p class="error-text" id="qrError">Failed to load QR code.</p>
+      <!-- Tabs -->
+      <div class="os-tabs">
+        <button class="os-tab active" onclick="switchOsTab('send', this)">📤 Send to Other OS</button>
+        <button class="os-tab"        onclick="switchOsTab('receive', this)">📥 Receive from Other OS</button>
+      </div>
+
+      <!-- ── SEND panel ── -->
+      <div class="os-panel active" id="os-send-panel">
+
+        <div class="os-info">
+          Queue files here, note the <strong>6-digit code</strong>, then boot to your other OS and enter the code to receive everything instantly.
         </div>
 
-        <!-- Devices -->
-        <div class="card" id="devicesSection">
-            <div class="card-label">02 — Devices</div>
-            <div class="section-header">
-                <div class="card-title">Connected</div>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:11px;color:var(--text-muted)">Selected: <span id="selectedCount" style="color:var(--accent3);font-weight:600;">0</span></span>
-                    <div class="device-count" id="deviceCount">0</div>
-                </div>
-            </div>
-            <ul class="device-list" id="deviceList"></ul>
-            <div class="empty-state" id="devicesEmpty">
-                <span class="empty-state-icon">📱</span>
-                Waiting for devices to join…
-            </div>
+        <div class="os-steps">
+          <div class="os-step"><div class="os-step-num">1</div><div class="os-step-text"><strong>Add your files</strong> below and click Queue</div></div>
+          <div class="os-step"><div class="os-step-num">2</div><div class="os-step-text"><strong>Write down the code</strong> shown — you'll need it after rebooting</div></div>
+          <div class="os-step"><div class="os-step-num">3</div><div class="os-step-text"><strong>Boot to the other OS</strong>, open ANDASHI-DROP and use the Receive tab</div></div>
         </div>
 
-        <!-- Upload -->
-        <div class="card">
-            <div class="card-label">03 — Upload</div>
-            <div class="card-title">Send a File</div>
-            <div class="upload-zone" id="uploadZone">
-                <input type="file" id="fileInput" onchange="onFileSelected(event)" />
-                <span class="upload-icon">☁️</span>
-                <div class="upload-title">Drop file here or click to browse</div>
-                <div class="upload-sub">Any file type supported</div>
-            </div>
-            <div class="selected-file" id="selectedFile">
-                <span>📄</span><span id="selectedFileName">—</span>
-            </div>
-            <div class="progress-wrap" id="progressWrap">
-                <div class="progress-bar" id="progressBar"></div>
-            </div>
-            <button class="btn btn-primary" onclick="uploadFile()">
-                <span>⬆</span> Upload File
-                <div class="spinner" id="uploadSpinner"></div>
-            </button>
+        <!-- File picker -->
+        <div class="os-upload-zone" id="osUploadZone">
+          <input type="file" id="osFileInput" multiple onchange="onOsFilesSelected(event)" />
+          <span style="font-size:28px;display:block;margin-bottom:8px;">🖥️</span>
+          <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:600;color:var(--text-dim);margin-bottom:4px;">Select files to queue</div>
+          <div style="font-size:11px;color:var(--text-muted);">Multiple files supported</div>
         </div>
 
-        <!-- Files -->
-        <div class="card">
-            <div class="card-label">04 — Files</div>
-            <div class="section-header">
-                <div class="card-title">Available Files</div>
-                <button class="btn-ghost btn" onclick="loadFiles()">↻ Refresh</button>
-            </div>
-            <ul class="files-list" id="fileList"></ul>
-            <div class="empty-state" id="filesEmpty">
-                <span class="empty-state-icon">🗂</span>
-                No files yet in this session
-            </div>
+        <!-- Queued file list -->
+        <div class="os-queued-files" id="osQueuedFiles"></div>
+
+        <!-- Queue button -->
+        <button class="btn-os-primary" id="osQueueBtn" onclick="createOsTransfer()" disabled>
+          <span>⬆</span> Queue Files for Transfer
+          <div class="spinner" id="osQueueSpinner"></div>
+        </button>
+
+        <!-- Code display (shown after queuing) -->
+        <div id="osCodeWrap" style="display:none;">
+          <div class="os-code-display">
+            <div class="os-code-label">Your Transfer Code</div>
+            <div class="os-code-number" id="osCodeDisplay">——————</div>
+            <div class="os-code-hint">Write this down — it expires in 48 hours</div>
+          </div>
+          <div class="os-status waiting" id="osSendStatus">
+            <span>⏳</span> Waiting for other OS to claim files…
+          </div>
         </div>
+
+      </div>
+
+      <!-- ── RECEIVE panel ── -->
+      <div class="os-panel" id="os-receive-panel">
+
+        <div class="os-info">
+          Enter the <strong>6-digit code</strong> from your other OS to download all queued files instantly.
+        </div>
+
+        <div class="os-steps">
+          <div class="os-step"><div class="os-step-num">1</div><div class="os-step-text"><strong>Get the code</strong> from the other OS (Send tab)</div></div>
+          <div class="os-step"><div class="os-step-num">2</div><div class="os-step-text"><strong>Enter it below</strong> and click Check</div></div>
+          <div class="os-step"><div class="os-step-num">3</div><div class="os-step-text"><strong>Click Claim Files</strong> to download everything</div></div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Transfer Code</label>
+          <input class="input" id="osReceiveCode" placeholder="Enter 6-digit code…"
+            maxlength="6" style="font-family:'Syne',sans-serif;font-size:22px;letter-spacing:6px;text-align:center;"
+            oninput="this.value=this.value.replace(/\D/g,''); onOsCodeInput()" />
+        </div>
+
+        <button class="btn-os-primary" id="osCheckBtn" onclick="checkOsQueue()" disabled>
+          <span>🔍</span> Check Code
+          <div class="spinner" id="osCheckSpinner"></div>
+        </button>
+
+        <!-- Status + claim -->
+        <div id="osReceiveStatus" style="margin-top:12px;display:none;">
+          <div class="os-status ready" id="osReceiveInfo"></div>
+          <div class="os-queued-files" id="osReceiveFileList" style="margin-top:10px;"></div>
+          <button class="btn-os-primary" id="osClaimBtn" onclick="claimOsFiles()" style="margin-top:12px;">
+            <span>⬇</span> Claim &amp; Download Files
+          </button>
+        </div>
+
+      </div>
 
     </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+
+<div class="wrapper">
+
+  <header>
+    <img class="logo-img" src="img/my_logo2.png" alt="ANDASHI Logo" onerror="this.style.display='none'" />
+    <div class="logo-text-wrap">
+      <div class="logo-text">
+        <span class="brand">ANDASHI</span><span class="dash">-</span><span class="product">DROP</span>
+      </div>
+      <div class="logo-sub">Secure File Transfer System</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-os-trigger" onclick="openOsModal()">⇄ OS Transfer</button>
+      <button id="installBtn" onclick="installApp()">⬇ Install</button>
+      <div class="status-pill">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- Session -->
+    <div class="card">
+      <div class="card-label">01 — Session</div>
+      <div class="card-title">Start or Join</div>
+      <div class="session-badge" id="sessionBadge" style="display:none;">
+        <div class="session-badge-icon">🔗</div>
+        <div style="min-width:0;">
+          <div class="session-badge-label">Active Session</div>
+          <div class="session-badge-value" id="currentSession">—</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="createSession()">
+        <span>✦</span> Create New Session
+        <div class="spinner" id="createSpinner"></div>
+      </button>
+      <div class="divider">or join existing</div>
+      <div class="input-group">
+        <label class="input-label">Session ID</label>
+        <input class="input" type="text" id="sessionInput" placeholder="Enter session ID…" />
+      </div>
+      <button class="btn btn-secondary" onclick="joinSession()">
+        <span>→</span> Join Session
+        <div class="spinner" id="joinSpinner"></div>
+      </button>
+      <div class="qr-container" id="qrContainer">
+        <div class="qr-frame"><img id="qrImage" alt="QR Code" /></div>
+        <div class="qr-hint">Scan to join on mobile<br><strong>Same network required</strong></div>
+      </div>
+      <p class="error-text" id="qrError">Failed to load QR code.</p>
+    </div>
+
+    <!-- Devices -->
+    <div class="card" id="devicesSection">
+      <div class="card-label">02 — Devices</div>
+      <div class="section-header">
+        <div class="card-title">Connected</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:11px;color:var(--text-muted)">Selected: <span id="selectedCount" style="color:var(--accent3);font-weight:600;">0</span></span>
+          <div class="device-count" id="deviceCount">0</div>
+        </div>
+      </div>
+      <ul class="device-list" id="deviceList"></ul>
+      <div class="empty-state" id="devicesEmpty">
+        <span class="empty-state-icon">📱</span>
+        Waiting for devices to join…
+      </div>
+    </div>
+
+    <!-- Upload -->
+    <div class="card">
+      <div class="card-label">03 — Upload</div>
+      <div class="card-title">Send a File</div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" onchange="onFileSelected(event)" />
+        <span class="upload-icon">☁️</span>
+        <div class="upload-title">Drop file here or click to browse</div>
+        <div class="upload-sub">Any file type supported</div>
+      </div>
+      <div class="selected-file" id="selectedFile">
+        <span>📄</span><span id="selectedFileName">—</span>
+      </div>
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <button class="btn btn-primary" onclick="uploadFile()">
+        <span>⬆</span> Upload File
+        <div class="spinner" id="uploadSpinner"></div>
+      </button>
+    </div>
+
+    <!-- Files -->
+    <div class="card">
+      <div class="card-label">04 — Files</div>
+      <div class="section-header">
+        <div class="card-title">Available Files</div>
+        <button class="btn-ghost btn" onclick="loadFiles()">↻ Refresh</button>
+      </div>
+      <ul class="files-list" id="fileList"></ul>
+      <div class="empty-state" id="filesEmpty">
+        <span class="empty-state-icon">🗂</span>
+        No files yet in this session
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
+// ══════════════════════════════════════════════════════════
+//  CORE
+// ══════════════════════════════════════════════════════════
 const SERVER = window.location.origin;
 const socket = io(SERVER);
 let mySocketId = null, currentSessionId = null, isOwner = false;
-
-// ── Track selected target devices (owner → guests) ──
 let selectedTargets = new Set();
 
 const params = new URLSearchParams(window.location.search);
 const sessionFromURL = params.get("session");
+const actionFromURL  = params.get("action");
 
 socket.on("connect", () => socket.emit("register-device"));
-
 socket.on("registered", (id) => {
-    mySocketId = id;
-    setStatus(true);
-    if (sessionFromURL) {
-        document.getElementById("sessionInput").value = sessionFromURL;
-        setTimeout(() => joinSession(), 300);
-    }
+    mySocketId = id; setStatus(true);
+    if (sessionFromURL) { document.getElementById("sessionInput").value = sessionFromURL; setTimeout(joinSession, 300); }
+    if (actionFromURL === "ostransfer") openOsModal();
 });
-
 socket.on("disconnect", () => setStatus(false));
+socket.on("device-update", (devices) => { if (isOwner) updateDeviceList(devices); });
+socket.on("receive-file", (file) => { toast(`📥 New file received: ${file.name}`, "success"); loadFiles(); });
 
-socket.on("device-update", (devices) => {
-    if (isOwner) updateDeviceList(devices);
-});
-
-// ✅ FIX 1: When a file is received, reload the full merged list so it always stays in sync
-socket.on("receive-file", (file) => {
-    toast(`📥 New file received: ${file.name}`, "success");
-    loadFiles(); // re-fetches both session folder + inbox together
-});
-
-// ── Helpers ──
 function setStatus(on) {
     document.getElementById("statusDot").classList.toggle("connected", on);
     document.getElementById("statusText").innerText = on ? "Connected" : "Offline";
 }
-
 function toast(msg, type="info") {
-    const icons = {success:"✅", error:"❌", info:"ℹ️"};
+    const icons = {success:"✅",error:"❌",info:"ℹ️"};
     const el = document.createElement("div");
     el.className = `toast ${type}`;
     el.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${msg}</span>`;
     document.getElementById("toast-container").appendChild(el);
-    setTimeout(() => { el.style.animation="toast-out 0.3s forwards"; setTimeout(()=>el.remove(),300); }, 3000);
+    setTimeout(() => { el.style.animation="toast-out 0.3s forwards"; setTimeout(()=>el.remove(),300); }, 3500);
 }
-
 function fileEmoji(name) {
     const ext = (name.split('.').pop()||'').toLowerCase();
-    const map = {pdf:'📄',jpg:'🖼',jpeg:'🖼',png:'🖼',gif:'🖼',mp4:'🎬',mov:'🎬',mp3:'🎵',wav:'🎵',zip:'🗜',rar:'🗜',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',ppt:'📊',pptx:'📊',txt:'📃',js:'💻',py:'💻',html:'💻'};
-    return map[ext] || '📁';
+    const map={pdf:'📄',jpg:'🖼',jpeg:'🖼',png:'🖼',gif:'🖼',mp4:'🎬',mov:'🎬',mp3:'🎵',wav:'🎵',zip:'🗜',rar:'🗜',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',ppt:'📊',pptx:'📊',txt:'📃',js:'💻',py:'💻',html:'💻'};
+    return map[ext]||'📁';
 }
+function showSessionBadge(id) { document.getElementById("currentSession").innerText = id; document.getElementById("sessionBadge").style.display="flex"; }
 
-function showSessionBadge(id) {
-    document.getElementById("currentSession").innerText = id;
-    document.getElementById("sessionBadge").style.display = "flex";
-}
-
-// ── Create session ──
+// ── Session ────────────────────────────────────────────────
 async function createSession() {
-    if (!mySocketId) { toast("Still connecting, try again!", "error"); return; }
+    if (!mySocketId) { toast("Still connecting…","error"); return; }
     const sp = document.getElementById("createSpinner"); sp.classList.add("visible");
     try {
-        const res = await fetch(`${SERVER}/api/sessions/create`, {
-            method: "POST", headers: {"Content-Type":"application/json"},
-            body: JSON.stringify({ socketId: mySocketId })
-        });
+        const res = await fetch(`${SERVER}/api/sessions/create`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({socketId:mySocketId})});
         const data = await res.json();
-        if (data.error) { toast(data.error, "error"); return; }
-        currentSessionId = data.sessionId;
-        isOwner = true;
+        if (data.error) { toast(data.error,"error"); return; }
+        currentSessionId = data.sessionId; isOwner = true;
         showSessionBadge(currentSessionId);
         socket.emit("join-session", currentSessionId);
         document.getElementById("devicesSection").classList.add("visible");
         await generateQR(currentSessionId);
-        toast("Session created!", "success");
-    } catch(e) { toast("Failed to create session", "error"); }
+        toast("Session created!","success");
+    } catch(e) { toast("Failed to create session","error"); }
     finally { sp.classList.remove("visible"); }
 }
 
-// ── Generate QR ──
 async function generateQR(sessionId) {
-    const container = document.getElementById("qrContainer");
-    const qrImg     = document.getElementById("qrImage");
-    const qrError   = document.getElementById("qrError");
+    const container=document.getElementById("qrContainer"), qrImg=document.getElementById("qrImage"), qrError=document.getElementById("qrError");
     container.classList.remove("visible"); qrError.classList.remove("visible");
     try {
-        const qrRes = await fetch(`${SERVER}/api/sessions/qr/${sessionId}`);
-        const qrData = await qrRes.json();
+        const qrData = await fetch(`${SERVER}/api/sessions/qr/${sessionId}`).then(r=>r.json());
         const qrSrc = qrData.qr||qrData.url||qrData.image||qrData.data||qrData.q||null;
-        if (qrSrc) { qrImg.src = qrSrc; container.classList.add("visible"); }
-        else { console.error("QR response:", qrData); qrError.classList.add("visible"); }
+        if (qrSrc) { qrImg.src=qrSrc; container.classList.add("visible"); }
+        else qrError.classList.add("visible");
     } catch(e) { qrError.classList.add("visible"); }
 }
 
-// ── Join session ──
 async function joinSession() {
     const sessionId = document.getElementById("sessionInput").value.trim();
-    if (!sessionId) { toast("Enter a session ID", "error"); return; }
+    if (!sessionId) { toast("Enter a session ID","error"); return; }
     const sp = document.getElementById("joinSpinner"); sp.classList.add("visible");
     try {
-        const res = await fetch(`${SERVER}/api/sessions/join`, {
-            method: "POST", headers: {"Content-Type":"application/json"},
-            body: JSON.stringify({ sessionId, deviceName: getDeviceName(), socketId: mySocketId })
-        });
+        const res = await fetch(`${SERVER}/api/sessions/join`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId,deviceName:getDeviceName(),socketId:mySocketId})});
         const data = await res.json();
-        if (data.error) { toast(data.error, "error"); return; }
-        currentSessionId = sessionId;
-        isOwner = false;
+        if (data.error) { toast(data.error,"error"); return; }
+        currentSessionId=sessionId; isOwner=false;
         showSessionBadge(sessionId);
         document.getElementById("devicesSection").classList.remove("visible");
         socket.emit("join-session", sessionId);
-        loadFiles();
-        toast("Joined session!", "success");
-    } catch(e) { toast("Failed to join session", "error"); }
+        loadFiles(); toast("Joined session!","success");
+    } catch(e) { toast("Failed to join session","error"); }
     finally { sp.classList.remove("visible"); }
 }
 
-// ── File selected ──
+// ── File handling ──────────────────────────────────────────
 function onFileSelected(e) {
-    const file = e.target.files[0]; if (!file) return;
-    document.getElementById("selectedFileName").innerText = file.name;
+    const file=e.target.files[0]; if(!file) return;
+    document.getElementById("selectedFileName").innerText=file.name;
     document.getElementById("selectedFile").classList.add("visible");
 }
-
-// ── Drag & drop ──
 const zone = document.getElementById("uploadZone");
-zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("drag-over"); });
-zone.addEventListener("dragleave", () => zone.classList.remove("drag-over"));
-zone.addEventListener("drop", (e) => {
+zone.addEventListener("dragover",e=>{e.preventDefault();zone.classList.add("drag-over");});
+zone.addEventListener("dragleave",()=>zone.classList.remove("drag-over"));
+zone.addEventListener("drop",(e)=>{
     e.preventDefault(); zone.classList.remove("drag-over");
-    const file = e.dataTransfer.files[0];
-    if (file) {
-        document.getElementById("fileInput").files = e.dataTransfer.files;
-        document.getElementById("selectedFileName").innerText = file.name;
-        document.getElementById("selectedFile").classList.add("visible");
-    }
+    const file=e.dataTransfer.files[0];
+    if(file){document.getElementById("fileInput").files=e.dataTransfer.files;document.getElementById("selectedFileName").innerText=file.name;document.getElementById("selectedFile").classList.add("visible");}
 });
 
-// ── Upload / Send file ──
 async function uploadFile() {
-    const fileInput = document.getElementById("fileInput");
-    const file = fileInput.files[0];
-    if (!file) { toast("Select a file first", "error"); return; }
-    if (!currentSessionId) { toast("Join or create a session first", "error"); return; }
-
-    // Owner must select at least one target device
-    if (isOwner && selectedTargets.size === 0) {
-        toast("Select at least one device to send to", "error"); return;
-    }
-
-    const sp = document.getElementById("uploadSpinner");
-    const pw = document.getElementById("progressWrap");
-    const pb = document.getElementById("progressBar");
+    const file=document.getElementById("fileInput").files[0];
+    if(!file){toast("Select a file first","error");return;}
+    if(!currentSessionId){toast("Join or create a session first","error");return;}
+    if(isOwner&&selectedTargets.size===0){toast("Select at least one device","error");return;}
+    const sp=document.getElementById("uploadSpinner"),pw=document.getElementById("progressWrap"),pb=document.getElementById("progressBar");
     sp.classList.add("visible"); pw.classList.add("visible");
+    let prog=0; const iv=setInterval(()=>{prog=Math.min(prog+Math.random()*12,85);pb.style.width=prog+"%";},200);
+    const fd=new FormData(); fd.append("file",file);
+    if(isOwner) fd.append("targetSocketIds",JSON.stringify(Array.from(selectedTargets)));
+    else { fd.append("sendToOwner","true"); fd.append("sessionId",currentSessionId); }
+    try {
+        const data=await fetch(`${SERVER}/api/files/send`,{method:"POST",body:fd}).then(r=>r.json());
+        clearInterval(iv); pb.style.width="100%";
+        setTimeout(()=>{pw.classList.remove("visible");pb.style.width="0%";},600);
+        toast(data.message||"File sent!","success");
+        document.getElementById("selectedFile").classList.remove("visible");
+    } catch(e){clearInterval(iv);toast("Send failed","error");}
+    finally{sp.classList.remove("visible");}
+}
 
-    let prog = 0;
-    const interval = setInterval(() => { prog = Math.min(prog + Math.random() * 12, 85); pb.style.width = prog + "%"; }, 200);
+async function loadFiles() {
+    if(!currentSessionId&&!mySocketId) return;
+    const list=document.getElementById("fileList"),empty=document.getElementById("filesEmpty");
+    list.innerHTML="";
+    const [sessionFiles,inboxFiles]=await Promise.all([
+        currentSessionId ? fetch(`${SERVER}/api/files/list/${currentSessionId}`).then(r=>r.json()).catch(()=>[]) : Promise.resolve([]),
+        mySocketId       ? fetch(`${SERVER}/api/files/inbox/${mySocketId}`).then(r=>r.json()).catch(()=>[])       : Promise.resolve([])
+    ]);
+    const allFiles=[...sessionFiles.map(f=>({...f,source:"session"})),...inboxFiles.map(f=>({name:f.name,url:`/api/files/download/${f.path}`,source:"inbox"}))];
+    if(!allFiles.length){empty.style.display="block";return;}
+    empty.style.display="none";
+    allFiles.forEach((file,i)=>{
+        const isInbox=file.source==="inbox";
+        const li=document.createElement("li"); li.className="file-item"; li.style.animationDelay=(i*0.05)+"s";
+        if(isInbox) li.style.borderLeft="2px solid rgba(0,255,212,0.4)";
+        li.innerHTML=`<div class="file-icon-wrap">${fileEmoji(file.name)}</div><div class="file-info"><div class="file-name">${isInbox?"📥 ":""}${file.name}</div>${isInbox?'<div style="font-size:10px;color:var(--accent3);margin-top:2px;letter-spacing:0.5px;">RECEIVED</div>':""}</div><a class="file-download" href="${SERVER}${file.url}" target="_blank">↓ Download</a>`;
+        list.appendChild(li);
+    });
+}
 
-    const formData = new FormData();
-    formData.append("file", file);
+function updateDeviceList(devices) {
+    const list=document.getElementById("deviceList"),empty=document.getElementById("devicesEmpty"),countEl=document.getElementById("deviceCount");
+    selectedTargets.clear(); updateSelectedCount();
+    countEl.innerText=devices.length; list.innerHTML="";
+    if(!devices.length){empty.style.display="block";return;}
+    empty.style.display="none";
+    devices.forEach((d,i)=>{
+        const li=document.createElement("li"); li.className="device-item"; li.style.animationDelay=(i*0.05)+"s"; li.dataset.socketId=d.socketId;
+        const btn=document.createElement("button"); btn.className="btn-ghost btn"; btn.innerText="Select"; btn.style.marginLeft="auto"; btn.style.flexShrink="0";
+        btn.addEventListener("click",()=>{
+            if(selectedTargets.has(d.socketId)){selectedTargets.delete(d.socketId);btn.innerText="Select";btn.style.background="";btn.style.color="";li.style.borderColor="";}
+            else{selectedTargets.add(d.socketId);btn.innerText="✓ Selected";btn.style.background="rgba(0,255,212,0.15)";btn.style.color="#00ffd4";btn.style.borderColor="rgba(0,255,212,0.4)";li.style.borderColor="rgba(0,255,212,0.25)";}
+            updateSelectedCount();
+        });
+        li.innerHTML=`<div class="device-avatar">${d.name.charAt(0).toUpperCase()}</div><span style="flex:1;font-size:13px;color:var(--text-dim)">${d.name}</span>`;
+        li.appendChild(btn); list.appendChild(li);
+    });
+}
+function updateSelectedCount() { const el=document.getElementById("selectedCount"); if(el) el.innerText=selectedTargets.size; }
+function getDeviceName() {
+    const s=localStorage.getItem("deviceName"); if(s) return s;
+    const n=(navigator.userAgent.includes("Mobile")?"📱 Mobile":"💻 Desktop")+" "+Math.floor(Math.random()*1000);
+    localStorage.setItem("deviceName",n); return n;
+}
 
-    if (isOwner) {
-        // Owner → send to selected guest devices
-        formData.append("targetSocketIds", JSON.stringify(Array.from(selectedTargets)));
-    } else {
-        // Guest → always send to owner
-        formData.append("sendToOwner", "true");
-        formData.append("sessionId", currentSessionId);
-    }
+// ══════════════════════════════════════════════════════════
+//  OS TRANSFER
+// ══════════════════════════════════════════════════════════
+let osTransferCode   = null;
+let osSelectedFiles  = [];
+let osCurrentCode    = null;  // code being received
+
+function openOsModal()  { document.getElementById("osModal").classList.add("open"); document.body.style.overflow="hidden"; }
+function closeOsModal(e){ if(e&&e.target!==document.getElementById("osModal")) return; document.getElementById("osModal").classList.remove("open"); document.body.style.overflow=""; }
+
+function switchOsTab(tab, el) {
+    document.querySelectorAll(".os-tab").forEach(t=>t.classList.remove("active"));
+    document.querySelectorAll(".os-panel").forEach(p=>p.classList.remove("active"));
+    el.classList.add("active");
+    document.getElementById(`os-${tab}-panel`).classList.add("active");
+}
+
+// ── Send side ──────────────────────────────────────────────
+function onOsFilesSelected(e) {
+    osSelectedFiles = Array.from(e.target.files);
+    renderOsQueuedFiles();
+    document.getElementById("osQueueBtn").disabled = osSelectedFiles.length === 0;
+}
+
+function renderOsQueuedFiles() {
+    const container = document.getElementById("osQueuedFiles");
+    container.innerHTML = "";
+    osSelectedFiles.forEach(f => {
+        const div = document.createElement("div");
+        div.className = "os-queued-item";
+        div.innerHTML = `<span>${fileEmoji(f.name)}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</span><span style="font-size:10px;color:var(--text-muted)">${(f.size/1024/1024).toFixed(1)}MB</span>`;
+        container.appendChild(div);
+    });
+}
+
+async function createOsTransfer() {
+    if (osSelectedFiles.length === 0) { toast("Add files first","error"); return; }
+    const sp = document.getElementById("osQueueSpinner"); sp.classList.add("visible");
+    document.getElementById("osQueueBtn").disabled = true;
 
     try {
-        const res = await fetch(`${SERVER}/api/files/send`, { method: "POST", body: formData });
-        const data = await res.json();
-        clearInterval(interval); pb.style.width = "100%";
-        setTimeout(() => { pw.classList.remove("visible"); pb.style.width = "0%"; }, 600);
-        toast(data.message || "File sent!", "success");
-        document.getElementById("selectedFile").classList.remove("visible");
-    } catch(e) { clearInterval(interval); toast("Send failed", "error"); }
+        // 1 — create queue, get code
+        const createRes = await fetch(`${SERVER}/api/files/os-transfer/create`, {method:"POST"}).then(r=>r.json());
+        if (createRes.error) { toast(createRes.error,"error"); return; }
+        osTransferCode = createRes.code;
+
+        // 2 — upload all files to the queue
+        const fd = new FormData();
+        fd.append("code", osTransferCode);
+        osSelectedFiles.forEach(f => fd.append("files", f));
+
+        const sendRes = await fetch(`${SERVER}/api/files/os-transfer/send`, {method:"POST",body:fd}).then(r=>r.json());
+        if (sendRes.error) { toast(sendRes.error,"error"); return; }
+
+        // 3 — show code
+        document.getElementById("osCodeDisplay").innerText = osTransferCode;
+        document.getElementById("osCodeWrap").style.display = "block";
+        toast(`${osSelectedFiles.length} file(s) queued — code: ${osTransferCode}`, "success");
+
+        // 4 — poll for claimed status
+        pollOsSendStatus(osTransferCode);
+
+    } catch(e) { toast("Queue failed","error"); }
     finally { sp.classList.remove("visible"); }
 }
 
-// ── Load files — merges session folder + inbox so refresh never wipes anything ──
-async function loadFiles() {
-    if (!currentSessionId && !mySocketId) return;
-
-    const list  = document.getElementById("fileList");
-    const empty = document.getElementById("filesEmpty");
-    list.innerHTML = "";
-
-    // Fetch both sources in parallel
-    const [sessionFiles, inboxFiles] = await Promise.all([
-        currentSessionId
-            ? fetch(`${SERVER}/api/files/list/${currentSessionId}`).then(r => r.json()).catch(() => [])
-            : Promise.resolve([]),
-        mySocketId
-            ? fetch(`${SERVER}/api/files/inbox/${mySocketId}`).then(r => r.json()).catch(() => [])
-            : Promise.resolve([])
-    ]);
-
-    // Build a unified list — inbox items flagged as received
-    const allFiles = [
-        ...sessionFiles.map(f => ({ ...f, source: "session" })),
-        ...inboxFiles.map(f  => ({ name: f.name, url: `/api/files/download/${f.path}`, source: "inbox" }))
-    ];
-
-    if (!allFiles.length) { empty.style.display = "block"; return; }
-    empty.style.display = "none";
-
-    allFiles.forEach((file, i) => {
-        const isInbox = file.source === "inbox";
-        const li = document.createElement("li");
-        li.className = "file-item";
-        li.style.animationDelay = (i * 0.05) + "s";
-        if (isInbox) li.style.borderLeft = "2px solid rgba(0,255,212,0.4)";
-        li.innerHTML = `
-            <div class="file-icon-wrap">${fileEmoji(file.name)}</div>
-            <div class="file-info">
-                <div class="file-name">${isInbox ? "📥 " : ""}${file.name}</div>
-                ${isInbox ? '<div style="font-size:10px;color:var(--accent3);margin-top:2px;letter-spacing:0.5px;">RECEIVED</div>' : ""}
-            </div>
-            <a class="file-download" href="${SERVER}${file.url}" target="_blank">↓ Download</a>
-        `;
-        list.appendChild(li);
-    });
+function pollOsSendStatus(code) {
+    const statusEl = document.getElementById("osSendStatus");
+    const iv = setInterval(async () => {
+        try {
+            const data = await fetch(`${SERVER}/api/files/os-transfer/status/${code}`).then(r=>r.json());
+            if (data.claimed) {
+                clearInterval(iv);
+                statusEl.className="os-status claimed";
+                statusEl.innerHTML="<span>✅</span> Files claimed by the other OS!";
+                toast("Other OS claimed your files!","success");
+            }
+        } catch(e) { clearInterval(iv); }
+    }, 4000);
 }
 
-// ── Update device list (owner only) ──
-function updateDeviceList(devices) {
-    const list  = document.getElementById("deviceList");
-    const empty = document.getElementById("devicesEmpty");
-    const countEl = document.getElementById("deviceCount");
+// ── Receive side ───────────────────────────────────────────
+function onOsCodeInput() {
+    const val = document.getElementById("osReceiveCode").value;
+    document.getElementById("osCheckBtn").disabled = val.length !== 6;
+    document.getElementById("osReceiveStatus").style.display = "none";
+}
 
-    // ✅ FIX 3: Reset selections whenever the device list refreshes
-    selectedTargets.clear();
-    updateSelectedCount();
+async function checkOsQueue() {
+    const code = document.getElementById("osReceiveCode").value.trim();
+    if (code.length !== 6) { toast("Enter a 6-digit code","error"); return; }
+    const sp = document.getElementById("osCheckSpinner"); sp.classList.add("visible");
 
-    countEl.innerText = devices.length;
-    list.innerHTML = "";
+    try {
+        const data = await fetch(`${SERVER}/api/files/os-transfer/status/${code}`).then(r=>r.json());
+        if (data.error) { toast(data.error,"error"); return; }
+        if (data.claimed) { toast("This transfer has already been claimed","error"); return; }
+        if (data.fileCount === 0) { toast("No files queued yet — try again in a moment","info"); return; }
 
-    if (!devices.length) { empty.style.display = "block"; return; }
-    empty.style.display = "none";
+        osCurrentCode = code;
+        const statusEl  = document.getElementById("osReceiveStatus");
+        const infoEl    = document.getElementById("osReceiveInfo");
+        const fileListEl = document.getElementById("osReceiveFileList");
 
-    devices.forEach((d, i) => {
-        const li = document.createElement("li");
-        li.className = "device-item";
-        li.style.animationDelay = (i * 0.05) + "s";
-        li.dataset.socketId = d.socketId;
+        infoEl.className = "os-status ready";
+        infoEl.innerHTML = `<span>📦</span> <strong>${data.fileCount} file(s)</strong> ready to download`;
 
-        const selectBtn = document.createElement("button");
-        selectBtn.className = "btn-ghost btn";
-        selectBtn.innerText = "Select";
-        selectBtn.style.marginLeft = "auto";
-        selectBtn.style.flexShrink = "0";
-
-        // ✅ FIX 2: Update count AFTER modifying the Set, not before
-        selectBtn.addEventListener("click", () => {
-            if (selectedTargets.has(d.socketId)) {
-                selectedTargets.delete(d.socketId);
-                selectBtn.innerText = "Select";
-                selectBtn.style.background = "";
-                selectBtn.style.color = "";
-                li.style.borderColor = "";
-            } else {
-                selectedTargets.add(d.socketId);
-                selectBtn.innerText = "✓ Selected";
-                selectBtn.style.background = "rgba(0,255,212,0.15)";
-                selectBtn.style.color = "#00ffd4";
-                selectBtn.style.borderColor = "rgba(0,255,212,0.4)";
-                li.style.borderColor = "rgba(0,255,212,0.25)";
-            }
-            updateSelectedCount(); // ✅ called AFTER Set is updated
+        fileListEl.innerHTML = "";
+        data.files.forEach(f => {
+            const div = document.createElement("div"); div.className = "os-queued-item";
+            div.innerHTML = `<span>${fileEmoji(f.name)}</span><span style="flex:1">${f.name}</span><span style="font-size:10px;color:var(--text-muted)">${(f.size/1024/1024).toFixed(1)}MB</span>`;
+            fileListEl.appendChild(div);
         });
 
-        li.innerHTML = `
-            <div class="device-avatar">${d.name.charAt(0).toUpperCase()}</div>
-            <span style="flex:1;font-size:13px;color:var(--text-dim)">${d.name}</span>
-        `;
-        li.appendChild(selectBtn);
-        list.appendChild(li);
+        statusEl.style.display = "block";
+    } catch(e) { toast("Failed to check code","error"); }
+    finally { sp.classList.remove("visible"); }
+}
+
+function claimOsFiles() {
+    if (!osCurrentCode) return;
+    // Navigate directly to the claim endpoint — browser handles the download
+    window.location.href = `${SERVER}/api/files/os-transfer/claim/${osCurrentCode}`;
+    toast("Download started!","success");
+    setTimeout(() => { document.getElementById("osReceiveStatus").style.display="none"; document.getElementById("osReceiveCode").value=""; osCurrentCode=null; }, 1500);
+}
+
+// ══════════════════════════════════════════════════════════
+//  PWA
+// ══════════════════════════════════════════════════════════
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js")
+            .then(reg => console.log("[PWA] SW registered:", reg.scope))
+            .catch(err => console.error("[PWA] SW failed:", err));
     });
 }
 
-// ✅ FIX 2: Separate function so count always reflects actual Set size
-function updateSelectedCount() {
-    const el = document.getElementById("selectedCount");
-    if (el) el.innerText = selectedTargets.size;
-}
-
-function getDeviceName() {
-    const stored = localStorage.getItem("deviceName"); if (stored) return stored;
-    const name = (navigator.userAgent.includes("Mobile") ? "📱 Mobile" : "💻 Desktop") + " " + Math.floor(Math.random() * 1000);
-    localStorage.setItem("deviceName", name); return name;
+let deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault(); deferredPrompt = e;
+    document.getElementById("installBtn").style.display = "flex";
+});
+window.addEventListener("appinstalled", () => {
+    document.getElementById("installBtn").style.display = "none";
+    deferredPrompt = null;
+});
+function installApp() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
 }
 </script>
 </body>
