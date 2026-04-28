@@ -80,12 +80,17 @@ function getLocalIP() {
 
 router.get("/qr/:sessionId", async (req, res) => {
     const { sessionId } = req.params;
-    const ip = getLocalIP();
-    const url = `http://${ip}:5000/?session=${sessionId}`;
+
+    // ✅ Use Railway URL in production, local IP in development
+    const baseUrl = process.env.BASE_URL || `http://${getLocalIP()}:5000`;
+
+    const url = `${baseUrl}/?session=${sessionId}`;
+
     try {
         const qrImage = await QRCode.toDataURL(url);
         res.json({ qr: qrImage, url });
     } catch (err) {
+        console.error("QR error:", err);
         res.status(500).json({ error: "QR generation failed" });
     }
 });
