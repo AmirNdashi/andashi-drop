@@ -53,12 +53,13 @@ router.post("/upload", upload.single("file"), (req, res) => {
 });
 
 // ── Send file directly to target device(s) ───────────────
-router.post("/send", upload.single("file"), (req, res) => {
+router.post("/send", upload.array("files", 50), (req, res) => {
     const { targetSocketIds, sendToOwner, sessionId } = req.body;
-    if (!req.file) return res.status(400).json({ error: "No file received" });
+
+    if (!req.files || req.files.length === 0)
+        return res.status(400).json({ error: "No files received" });
 
     const io = req.app.get("io");
-    const fileData = { name: req.file.originalname, path: req.file.filename };
     let targets = [];
 
     if (sendToOwner === "true") {
@@ -72,12 +73,19 @@ router.post("/send", upload.single("file"), (req, res) => {
         return res.status(400).json({ error: "No target specified" });
     }
 
-    targets.forEach(socketId => {
-        addToInbox(socketId, fileData);
-        io.to(socketId).emit("receive-file", fileData);
+    // Deliver every file to every target
+    req.files.forEach(file => {
+        const fileData = { name: file.originalname, path: file.filename };
+        targets.forEach(socketId => {
+            addToInbox(socketId, fileData);
+            io.to(socketId).emit("receive-file", fileData);
+        });
     });
 
-    res.json({ message: "File sent successfully" });
+    res.json({
+        message: `${req.files.length} file(s) sent successfully`,
+        count: req.files.length
+    });
 });
 
 // ── Inbox ─────────────────────────────────────────────────

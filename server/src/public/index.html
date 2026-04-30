@@ -553,10 +553,10 @@
       <div class="card-label">03 — Upload</div>
       <div class="card-title">Send a File</div>
       <div class="upload-zone" id="uploadZone">
-        <input type="file" id="fileInput" onchange="onFileSelected(event)" />
+        <input type="file" id="fileInput" multiple onchange="onFileSelected(event)" />
         <span class="upload-icon">☁️</span>
         <div class="upload-title">Drop file here or click to browse</div>
-        <div class="upload-sub">Any file type supported</div>
+        <div class="upload-sub">Multiple files supported — drop or click</div>
       </div>
       <div class="selected-file" id="selectedFile">
         <span>📄</span><span id="selectedFileName">—</span>
@@ -678,38 +678,81 @@ async function joinSession() {
 
 // ── File handling ──────────────────────────────────────────
 function onFileSelected(e) {
-    const file=e.target.files[0]; if(!file) return;
-    document.getElementById("selectedFileName").innerText=file.name;
-    document.getElementById("selectedFile").classList.add("visible");
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    renderSelectedFiles(files);
+}
+
+function renderSelectedFiles(files) {
+    const nameEl = document.getElementById("selectedFileName");
+    const wrap   = document.getElementById("selectedFile");
+    if (files.length === 1) {
+        nameEl.innerText = files[0].name;
+    } else {
+        nameEl.innerText = `${files.length} files selected`;
+    }
+    wrap.classList.add("visible");
+    // Show individual file chips below
+    let chipsEl = document.getElementById("fileChips");
+    if (!chipsEl) {
+        chipsEl = document.createElement("div");
+        chipsEl.id = "fileChips";
+        chipsEl.style.cssText = "display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;";
+        wrap.parentNode.insertBefore(chipsEl, wrap.nextSibling);
+    }
+    chipsEl.innerHTML = "";
+    if (files.length > 1) {
+        files.forEach(f => {
+            const chip = document.createElement("div");
+            chip.style.cssText = "display:flex;align-items:center;gap:5px;padding:4px 9px;background:rgba(0,180,255,0.07);border:1px solid rgba(0,180,255,0.15);border-radius:20px;font-size:11px;color:var(--text-dim);max-width:180px;overflow:hidden;";
+            chip.innerHTML = `<span>${fileEmoji(f.name)}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</span>`;
+            chipsEl.appendChild(chip);
+        });
+    }
 }
 const zone = document.getElementById("uploadZone");
 zone.addEventListener("dragover",e=>{e.preventDefault();zone.classList.add("drag-over");});
 zone.addEventListener("dragleave",()=>zone.classList.remove("drag-over"));
 zone.addEventListener("drop",(e)=>{
     e.preventDefault(); zone.classList.remove("drag-over");
-    const file=e.dataTransfer.files[0];
-    if(file){document.getElementById("fileInput").files=e.dataTransfer.files;document.getElementById("selectedFileName").innerText=file.name;document.getElementById("selectedFile").classList.add("visible");}
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length) {
+        document.getElementById("fileInput").files = e.dataTransfer.files;
+        renderSelectedFiles(files);
+    }
 });
 
 async function uploadFile() {
-    const file=document.getElementById("fileInput").files[0];
-    if(!file){toast("Select a file first","error");return;}
-    if(!currentSessionId){toast("Join or create a session first","error");return;}
-    if(isOwner&&selectedTargets.size===0){toast("Select at least one device","error");return;}
+    const files = Array.from(document.getElementById("fileInput").files);
+    if (!files.length) { toast("Select at least one file","error"); return; }
+    if (!currentSessionId) { toast("Join or create a session first","error"); return; }
+    if (isOwner && selectedTargets.size === 0) { toast("Select at least one device","error"); return; }
+
     const sp=document.getElementById("uploadSpinner"),pw=document.getElementById("progressWrap"),pb=document.getElementById("progressBar");
     sp.classList.add("visible"); pw.classList.add("visible");
-    let prog=0; const iv=setInterval(()=>{prog=Math.min(prog+Math.random()*12,85);pb.style.width=prog+"%";},200);
-    const fd=new FormData(); fd.append("file",file);
-    if(isOwner) fd.append("targetSocketIds",JSON.stringify(Array.from(selectedTargets)));
+
+    let prog=0;
+    const iv=setInterval(()=>{ prog=Math.min(prog+Math.random()*10,85); pb.style.width=prog+"%"; },200);
+
+    const fd = new FormData();
+    // Append all files under the same "files" key
+    files.forEach(f => fd.append("files", f));
+
+    if (isOwner) fd.append("targetSocketIds", JSON.stringify(Array.from(selectedTargets)));
     else { fd.append("sendToOwner","true"); fd.append("sessionId",currentSessionId); }
+
     try {
-        const data=await fetch(`${SERVER}/api/files/send`,{method:"POST",body:fd}).then(r=>r.json());
+        const data = await fetch(`${SERVER}/api/files/send`,{method:"POST",body:fd}).then(r=>r.json());
         clearInterval(iv); pb.style.width="100%";
         setTimeout(()=>{pw.classList.remove("visible");pb.style.width="0%";},600);
-        toast(data.message||"File sent!","success");
+        toast(data.message||"File(s) sent!","success");
+        // Clear UI
         document.getElementById("selectedFile").classList.remove("visible");
-    } catch(e){clearInterval(iv);toast("Send failed","error");}
-    finally{sp.classList.remove("visible");}
+        const chips=document.getElementById("fileChips");
+        if(chips) chips.innerHTML="";
+        document.getElementById("fileInput").value="";
+    } catch(e){ clearInterval(iv); toast("Send failed","error"); }
+    finally{ sp.classList.remove("visible"); }
 }
 
 async function loadFiles() {

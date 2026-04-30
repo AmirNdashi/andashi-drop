@@ -10,9 +10,8 @@ const sessionRoutes = require("./routes/sessionRoutes");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: {
-        origin: "*"
-    }
+    cors: { origin: "*" },
+    maxHttpBufferSize: 100 * 1024 * 1024
 });
 
 const PORT = process.env.PORT || 5000;
@@ -23,6 +22,9 @@ app.use(express.json());
 
 // Static frontend
 app.use(express.static(path.join(__dirname, "public")));
+
+const compression = require("compression");
+app.use(compression()); // Enable gzip compression for all responses
 
 // Routes
 app.use("/api/files", fileRoutes);
