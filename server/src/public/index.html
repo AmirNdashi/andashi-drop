@@ -732,7 +732,12 @@ async function uploadFile() {
     sp.classList.add("visible"); pw.classList.add("visible");
 
     let prog=0;
-    const iv=setInterval(()=>{ prog=Math.min(prog+Math.random()*10,85); pb.style.width=prog+"%"; },200);
+    // Faster progress simulation — fills to 92% quickly then waits for server
+    const iv=setInterval(()=>{ 
+        const step = prog < 50 ? 15 : prog < 80 ? 8 : 3;
+        prog=Math.min(prog + Math.random()*step, 92); 
+        pb.style.width=prog+"%"; 
+    }, 120);
 
     const fd = new FormData();
     // Append all files under the same "files" key
@@ -744,7 +749,7 @@ async function uploadFile() {
     try {
         const data = await fetch(`${SERVER}/api/files/send`,{method:"POST",body:fd}).then(r=>r.json());
         clearInterval(iv); pb.style.width="100%";
-        setTimeout(()=>{pw.classList.remove("visible");pb.style.width="0%";},600);
+        setTimeout(()=>{pw.classList.remove("visible");pb.style.width="0%";},300);
         toast(data.message||"File(s) sent!","success");
         // Clear UI
         document.getElementById("selectedFile").classList.remove("visible");

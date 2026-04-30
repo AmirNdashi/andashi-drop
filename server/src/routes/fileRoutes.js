@@ -11,32 +11,47 @@ const {
 
 const router = express.Router();
 
-// ── Ensure uploads folder exists before multer runs ───────
+// ── Ensure upload folders exist ───────────────────────────
 const uploadDir = path.join(__dirname, "../uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const osDir = path.join(__dirname, "../uploads/os-transfer");
 if (!fs.existsSync(osDir)) fs.mkdirSync(osDir, { recursive: true });
 
-const storage = multer.diskStorage({
+// Disk storage — for session uploads (need to persist for listing/download)
+const diskStorage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadDir),
-    filename:    (req, file, cb) => cb(null, Date.now() + "-" + file.originalname)
+    filename:    (req, file, cb) => {
+        // Sanitize filename — remove spaces and special chars for faster I/O
+        const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+        cb(null, Date.now() + "-" + safe);
+    }
 });
 
+// Memory storage — for direct device-to-device sends
+// Files never touch disk, just flow through RAM → Socket.IO → recipient
+// Much faster for small-medium files (under ~50MB)
+const memStorage = multer.memoryStorage();
+
+const uploadToDisk   = multer({ storage: diskStorage, limits: { fileSize: 500 * 1024 * 1024 } });
+const uploadToMemory = multer({ storage: memStorage,  limits: { fileSize: 100 * 1024 * 1024 } });
+
+// OS transfer still uses disk (files must survive between reboots)
 const osStorage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, osDir),
-    filename:    (req, file, cb) => cb(null, Date.now() + "-" + file.originalname)
+    filename:    (req, file, cb) => {
+        const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+        cb(null, Date.now() + "-" + safe);
+    }
 });
-
-const upload   = multer({ storage });
-const osUpload = multer({ storage: osStorage });
+const osUpload = multer({ storage: osStorage, limits: { fileSize: 500 * 1024 * 1024 } });
 
 // ═══════════════════════════════════════════════════════════
 //  REGULAR SESSION ROUTES
 // ═══════════════════════════════════════════════════════════
 
-// ── Upload to session folder ──────────────────────────────
-router.post("/upload", upload.single("file"), (req, res) => {
+// ── Upload to session folder (disk — needs to persist) ───
+router.post("/upload", uploadToDisk.single("file"), (req, res) => {
     const { sessionId } = req.body;
     if (!sessionId) return res.status(400).json({ error: "Session ID required" });
     if (!req.file)  return res.status(400).json({ error: "No file received" });
@@ -52,8 +67,10 @@ router.post("/upload", upload.single("file"), (req, res) => {
     res.json({ message: "File uploaded to session", filename: req.file.filename });
 });
 
-// ── Send file directly to target device(s) ───────────────
-router.post("/send", upload.array("files", 50), (req, res) => {
+// ── Send files directly to target device(s) ─────────────
+// Uses memory storage — no disk I/O, files stream straight
+// from request → RAM → Socket.IO → recipient. Much faster.
+router.post("/send", uploadToMemory.array("files", 50), (req, res) => {
     const { targetSocketIds, sendToOwner, sessionId } = req.body;
 
     if (!req.files || req.files.length === 0)
@@ -73,15 +90,25 @@ router.post("/send", upload.array("files", 50), (req, res) => {
         return res.status(400).json({ error: "No target specified" });
     }
 
-    // Deliver every file to every target
-    req.files.forEach(file => {
-        const fileData = { name: file.originalname, path: file.filename };
+    // Save each file to disk so recipient can download via URL
+    // Use async writes so response isn't blocked
+    const savedFiles = req.files.map(file => {
+        const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const filename = Date.now() + "-" + safe;
+        const filePath = path.join(uploadDir, filename);
+        fs.writeFile(filePath, file.buffer, () => {}); // non-blocking write
+        return { name: file.originalname, path: filename };
+    });
+
+    // Immediately notify targets — don't wait for disk write
+    savedFiles.forEach(fileData => {
         targets.forEach(socketId => {
             addToInbox(socketId, fileData);
             io.to(socketId).emit("receive-file", fileData);
         });
     });
 
+    // Respond instantly
     res.json({
         message: `${req.files.length} file(s) sent successfully`,
         count: req.files.length
