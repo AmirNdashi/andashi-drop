@@ -13,18 +13,53 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
     const url = new URL(e.request.url);
+
     // Always network-first for API and sockets
-    if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/socket.io/") || e.request.method !== "GET") {
-        e.respondWith(fetch(e.request).catch(() => new Response(JSON.stringify({error:"Offline"}),{headers:{"Content-Type":"application/json"}})));
+    if (
+        url.pathname.startsWith("/api/") ||
+        url.pathname.startsWith("/socket.io/") ||
+        e.request.method !== "GET"
+    ) {
+        e.respondWith(
+            fetch(e.request).catch(() =>
+                new Response(
+                    JSON.stringify({ error: "Offline" }),
+                    { headers: { "Content-Type": "application/json" } }
+                )
+            )
+        );
         return;
     }
-    // Pages: network first, cache fallback, offline page last
+
+    // Pages: network first, cache fallback
     if (e.request.mode === "navigate") {
-        e.respondWith(fetch(e.request).then(r => { caches.open(CACHE_NAME).then(c=>c.put(e.request,r.clone())); return r; }).catch(() => caches.match(e.request).then(c => c || caches.match("/offline.html"))));
+        e.respondWith(
+            fetch(e.request)
+                .then(r => {
+                    // ✅ Clone BEFORE doing anything else with r
+                    const clone = r.clone();
+                    caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+                    return r;
+                })
+                .catch(() =>
+                    caches.match(e.request).then(c => c || caches.match("/offline.html"))
+                )
+        );
         return;
     }
-    // Assets: cache first
-    e.respondWith(caches.match(e.request).then(c => c || fetch(e.request).then(r => { caches.open(CACHE_NAME).then(cache=>cache.put(e.request,r.clone())); return r; })));
+
+    // Static assets: cache first, network fallback
+    e.respondWith(
+        caches.match(e.request).then(cached => {
+            if (cached) return cached;
+            return fetch(e.request).then(r => {
+                // ✅ Clone BEFORE returning
+                const clone = r.clone();
+                caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+                return r;
+            });
+        })
+    );
 });
 
 self.addEventListener("push", (e) => {
