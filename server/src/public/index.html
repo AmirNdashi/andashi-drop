@@ -933,16 +933,71 @@ function claimOsFiles() {
 }
 
 // ══════════════════════════════════════════════════════════
-//  PWA
+//  PWA — Service Worker + Push Notifications
 // ══════════════════════════════════════════════════════════
+let swRegistration = null;
+
 if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/sw.js")
-            .then(reg => console.log("[PWA] SW registered:", reg.scope))
-            .catch(err => console.error("[PWA] SW failed:", err));
+    window.addEventListener("load", async () => {
+        try {
+            swRegistration = await navigator.serviceWorker.register("/sw.js");
+            console.log("[PWA] SW registered:", swRegistration.scope);
+            await subscribeToPush();
+        } catch(err) {
+            console.error("[PWA] SW failed:", err);
+        }
     });
 }
 
+// ── Push notification subscription ──
+async function subscribeToPush() {
+    if (!swRegistration || !("PushManager" in window)) return;
+
+    try {
+        let sub = await swRegistration.pushManager.getSubscription();
+
+        if (!sub) {
+            const { publicKey } = await fetch(`${SERVER}/api/push/vapid-key`).then(r => r.json());
+            if (!publicKey) return;
+
+            const permission = await Notification.requestPermission();
+            if (permission !== "granted") return;
+
+            sub = await swRegistration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(publicKey)
+            });
+        }
+
+        const waitForSocket = () => new Promise(resolve => {
+            if (mySocketId) return resolve(mySocketId);
+            const check = setInterval(() => {
+                if (mySocketId) { clearInterval(check); resolve(mySocketId); }
+            }, 200);
+        });
+
+        const socketId = await waitForSocket();
+
+        await fetch(`${SERVER}/api/push/subscribe`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ socketId, subscription: sub.toJSON() })
+        });
+
+        console.log("[Push] Subscribed successfully");
+    } catch(e) {
+        console.log("[Push] Subscription skipped:", e.message);
+    }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = "=".repeat((4 - base64String.length % 4) % 4);
+    const base64  = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const raw     = atob(base64);
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+// ── Install prompt ──
 let deferredPrompt = null;
 window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault(); deferredPrompt = e;
