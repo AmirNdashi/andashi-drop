@@ -597,86 +597,136 @@ const socket = io(SERVER);
 let mySocketId = null, currentSessionId = null, isOwner = false;
 let selectedTargets = new Set();
 
-const params = new URLSearchParams(window.location.search);
+const params        = new URLSearchParams(window.location.search);
 const sessionFromURL = params.get("session");
 const actionFromURL  = params.get("action");
 
 socket.on("connect", () => socket.emit("register-device"));
+
 socket.on("registered", (id) => {
-    mySocketId = id; setStatus(true);
-    if (sessionFromURL) { document.getElementById("sessionInput").value = sessionFromURL; setTimeout(joinSession, 300); }
+    mySocketId = id;
+    setStatus(true);
+    if (sessionFromURL) {
+        document.getElementById("sessionInput").value = sessionFromURL;
+        setTimeout(joinSession, 300);
+    }
     if (actionFromURL === "ostransfer") openOsModal();
 });
+
 socket.on("disconnect", () => setStatus(false));
 socket.on("device-update", (devices) => { if (isOwner) updateDeviceList(devices); });
-socket.on("receive-file", (file) => { toast(`📥 New file received: ${file.name}`, "success"); loadFiles(); });
 
+// ── Helpers ───────────────────────────────────────────────
 function setStatus(on) {
     document.getElementById("statusDot").classList.toggle("connected", on);
     document.getElementById("statusText").innerText = on ? "Connected" : "Offline";
 }
-function toast(msg, type="info") {
-    const icons = {success:"✅",error:"❌",info:"ℹ️"};
+
+function toast(msg, type = "info") {
+    const icons = { success: "✅", error: "❌", info: "ℹ️" };
     const el = document.createElement("div");
     el.className = `toast ${type}`;
     el.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${msg}</span>`;
     document.getElementById("toast-container").appendChild(el);
-    setTimeout(() => { el.style.animation="toast-out 0.3s forwards"; setTimeout(()=>el.remove(),300); }, 3500);
+    setTimeout(() => {
+        el.style.animation = "toast-out 0.3s forwards";
+        setTimeout(() => el.remove(), 300);
+    }, 3500);
 }
-function fileEmoji(name) {
-    const ext = (name.split('.').pop()||'').toLowerCase();
-    const map={pdf:'📄',jpg:'🖼',jpeg:'🖼',png:'🖼',gif:'🖼',mp4:'🎬',mov:'🎬',mp3:'🎵',wav:'🎵',zip:'🗜',rar:'🗜',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',ppt:'📊',pptx:'📊',txt:'📃',js:'💻',py:'💻',html:'💻'};
-    return map[ext]||'📁';
-}
-function showSessionBadge(id) { document.getElementById("currentSession").innerText = id; document.getElementById("sessionBadge").style.display="flex"; }
 
-// ── Session ────────────────────────────────────────────────
+function fileEmoji(name) {
+    const ext = (name.split('.').pop() || '').toLowerCase();
+    const map = {
+        pdf:'📄', jpg:'🖼', jpeg:'🖼', png:'🖼', gif:'🖼',
+        mp4:'🎬', mov:'🎬', mp3:'🎵', wav:'🎵',
+        zip:'🗜', rar:'🗜', doc:'📝', docx:'📝',
+        xls:'📊', xlsx:'📊', ppt:'📊', pptx:'📊',
+        txt:'📃', js:'💻', py:'💻', html:'💻'
+    };
+    return map[ext] || '📁';
+}
+
+function showSessionBadge(id) {
+    document.getElementById("currentSession").innerText = id;
+    document.getElementById("sessionBadge").style.display = "flex";
+}
+
+function getDeviceName() {
+    const stored = localStorage.getItem("deviceName");
+    if (stored) return stored;
+    const name = (navigator.userAgent.includes("Mobile") ? "📱 Mobile" : "💻 Desktop")
+        + " " + Math.floor(Math.random() * 1000);
+    localStorage.setItem("deviceName", name);
+    return name;
+}
+
+// ══════════════════════════════════════════════════════════
+//  SESSION
+// ══════════════════════════════════════════════════════════
 async function createSession() {
-    if (!mySocketId) { toast("Still connecting…","error"); return; }
-    const sp = document.getElementById("createSpinner"); sp.classList.add("visible");
+    if (!mySocketId) { toast("Still connecting…", "error"); return; }
+    const sp = document.getElementById("createSpinner");
+    sp.classList.add("visible");
     try {
-        const res = await fetch(`${SERVER}/api/sessions/create`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({socketId:mySocketId})});
+        const res  = await fetch(`${SERVER}/api/sessions/create`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ socketId: mySocketId })
+        });
         const data = await res.json();
-        if (data.error) { toast(data.error,"error"); return; }
-        currentSessionId = data.sessionId; isOwner = true;
+        if (data.error) { toast(data.error, "error"); return; }
+        currentSessionId = data.sessionId;
+        isOwner = true;
         showSessionBadge(currentSessionId);
         socket.emit("join-session", currentSessionId);
         document.getElementById("devicesSection").classList.add("visible");
         await generateQR(currentSessionId);
-        toast("Session created!","success");
-    } catch(e) { toast("Failed to create session","error"); }
+        toast("Session created!", "success");
+    } catch(e) { toast("Failed to create session", "error"); }
     finally { sp.classList.remove("visible"); }
 }
 
 async function generateQR(sessionId) {
-    const container=document.getElementById("qrContainer"), qrImg=document.getElementById("qrImage"), qrError=document.getElementById("qrError");
-    container.classList.remove("visible"); qrError.classList.remove("visible");
+    const container = document.getElementById("qrContainer");
+    const qrImg     = document.getElementById("qrImage");
+    const qrError   = document.getElementById("qrError");
+    container.classList.remove("visible");
+    qrError.classList.remove("visible");
     try {
-        const qrData = await fetch(`${SERVER}/api/sessions/qr/${sessionId}`).then(r=>r.json());
-        const qrSrc = qrData.qr||qrData.url||qrData.image||qrData.data||qrData.q||null;
-        if (qrSrc) { qrImg.src=qrSrc; container.classList.add("visible"); }
+        const qrData = await fetch(`${SERVER}/api/sessions/qr/${sessionId}`).then(r => r.json());
+        const qrSrc  = qrData.qr || qrData.url || qrData.image || qrData.data || qrData.q || null;
+        if (qrSrc) { qrImg.src = qrSrc; container.classList.add("visible"); }
         else qrError.classList.add("visible");
     } catch(e) { qrError.classList.add("visible"); }
 }
 
 async function joinSession() {
     const sessionId = document.getElementById("sessionInput").value.trim();
-    if (!sessionId) { toast("Enter a session ID","error"); return; }
-    const sp = document.getElementById("joinSpinner"); sp.classList.add("visible");
+    if (!sessionId) { toast("Enter a session ID", "error"); return; }
+    const sp = document.getElementById("joinSpinner");
+    sp.classList.add("visible");
     try {
-        const res = await fetch(`${SERVER}/api/sessions/join`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId,deviceName:getDeviceName(),socketId:mySocketId})});
+        const res  = await fetch(`${SERVER}/api/sessions/join`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId, deviceName: getDeviceName(), socketId: mySocketId })
+        });
         const data = await res.json();
-        if (data.error) { toast(data.error,"error"); return; }
-        currentSessionId=sessionId; isOwner=false;
+        if (data.error) { toast(data.error, "error"); return; }
+        currentSessionId = sessionId;
+        isOwner = false;
         showSessionBadge(sessionId);
         document.getElementById("devicesSection").classList.remove("visible");
         socket.emit("join-session", sessionId);
-        loadFiles(); toast("Joined session!","success");
-    } catch(e) { toast("Failed to join session","error"); }
+        loadFiles();
+        toast("Joined session!", "success");
+    } catch(e) { toast("Failed to join session", "error"); }
     finally { sp.classList.remove("visible"); }
 }
 
-// ── File handling ──────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+//  FILE SELECTION UI
+// ══════════════════════════════════════════════════════════
 function onFileSelected(e) {
     const files = Array.from(e.target.files);
     if (!files.length) return;
@@ -686,13 +736,9 @@ function onFileSelected(e) {
 function renderSelectedFiles(files) {
     const nameEl = document.getElementById("selectedFileName");
     const wrap   = document.getElementById("selectedFile");
-    if (files.length === 1) {
-        nameEl.innerText = files[0].name;
-    } else {
-        nameEl.innerText = `${files.length} files selected`;
-    }
+    nameEl.innerText = files.length === 1 ? files[0].name : `${files.length} files selected`;
     wrap.classList.add("visible");
-    // Show individual file chips below
+
     let chipsEl = document.getElementById("fileChips");
     if (!chipsEl) {
         chipsEl = document.createElement("div");
@@ -710,11 +756,14 @@ function renderSelectedFiles(files) {
         });
     }
 }
+
+// Drag & drop
 const zone = document.getElementById("uploadZone");
-zone.addEventListener("dragover",e=>{e.preventDefault();zone.classList.add("drag-over");});
-zone.addEventListener("dragleave",()=>zone.classList.remove("drag-over"));
-zone.addEventListener("drop",(e)=>{
-    e.preventDefault(); zone.classList.remove("drag-over");
+zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("drag-over"); });
+zone.addEventListener("dragleave", () => zone.classList.remove("drag-over"));
+zone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    zone.classList.remove("drag-over");
     const files = Array.from(e.dataTransfer.files);
     if (files.length) {
         document.getElementById("fileInput").files = e.dataTransfer.files;
@@ -722,107 +771,386 @@ zone.addEventListener("drop",(e)=>{
     }
 });
 
-async function uploadFile() {
-    const files = Array.from(document.getElementById("fileInput").files);
-    if (!files.length) { toast("Select at least one file","error"); return; }
-    if (!currentSessionId) { toast("Join or create a session first","error"); return; }
-    if (isOwner && selectedTargets.size === 0) { toast("Select at least one device","error"); return; }
+// ══════════════════════════════════════════════════════════
+//  CHUNKED SOCKET TRANSFER ENGINE
+// ══════════════════════════════════════════════════════════
+const CHUNK_SIZE = 256 * 1024; // 256KB per chunk
+let activeTransfers = {};       // transferId → incoming transfer state
 
-    const sp=document.getElementById("uploadSpinner"),pw=document.getElementById("progressWrap"),pb=document.getElementById("progressBar");
-    sp.classList.add("visible"); pw.classList.add("visible");
+// ── Incoming: server announces a file is coming ──────────
+socket.on("file-transfer-incoming", ({ transferId, fileName, fileSize, totalChunks }) => {
+    activeTransfers[transferId] = {
+        chunks:   new Array(totalChunks),
+        received: 0,
+        total:    totalChunks,
+        fileName,
+        fileSize
+    };
+    toast(`📥 Receiving: ${fileName}`, "info");
+    showReceiveProgress(transferId, fileName);
+});
 
-    let prog=0;
-    // Faster progress simulation — fills to 92% quickly then waits for server
-    const iv=setInterval(()=>{ 
-        const step = prog < 50 ? 15 : prog < 80 ? 8 : 3;
-        prog=Math.min(prog + Math.random()*step, 92); 
-        pb.style.width=prog+"%"; 
-    }, 120);
+// ── Incoming: a chunk arrives ────────────────────────────
+socket.on("file-chunk", ({ transferId, chunkIndex, chunk, totalChunks }) => {
+    const t = activeTransfers[transferId];
+    if (!t) return;
+    t.chunks[chunkIndex] = new Uint8Array(
+        chunk instanceof ArrayBuffer ? chunk : chunk.buffer || chunk
+    );
+    t.received++;
+    const pct = Math.round((t.received / t.total) * 100);
+    updateReceiveProgress(transferId, pct);
+});
 
-    const fd = new FormData();
-    // Append all files under the same "files" key
-    files.forEach(f => fd.append("files", f));
+// ── Incoming: all chunks done — assemble and download ────
+socket.on("file-transfer-complete", ({ transferId, fileName, downloadPath }) => {
+    const t = activeTransfers[transferId];
+    if (t && t.chunks.every(Boolean)) {
+        // Assemble in browser memory — instant, no extra request
+        const blob = new Blob(t.chunks.map(c => new Uint8Array(c)));
+        const url  = URL.createObjectURL(blob);
+        triggerDownload(url, fileName);
+    } else {
+        // Fallback: HTTP download if chunks incomplete
+        triggerDownload(`${SERVER}/api/files/download/${downloadPath}`, fileName);
+    }
+    clearReceiveProgress(transferId);
+    delete activeTransfers[transferId];
+    toast(`✅ ${fileName} received!`, "success");
+    loadFiles();
+});
 
-    if (isOwner) fd.append("targetSocketIds", JSON.stringify(Array.from(selectedTargets)));
-    else { fd.append("sendToOwner","true"); fd.append("sessionId",currentSessionId); }
+socket.on("file-transfer-cancelled", ({ transferId }) => {
+    clearReceiveProgress(transferId);
+    delete activeTransfers[transferId];
+    toast("Transfer was cancelled", "error");
+});
 
-    try {
-        const data = await fetch(`${SERVER}/api/files/send`,{method:"POST",body:fd}).then(r=>r.json());
-        clearInterval(iv); pb.style.width="100%";
-        setTimeout(()=>{pw.classList.remove("visible");pb.style.width="0%";},300);
-        toast(data.message||"File(s) sent!","success");
-        // Clear UI
-        document.getElementById("selectedFile").classList.remove("visible");
-        const chips=document.getElementById("fileChips");
-        if(chips) chips.innerHTML="";
-        document.getElementById("fileInput").value="";
-    } catch(e){ clearInterval(iv); toast("Send failed","error"); }
-    finally{ sp.classList.remove("visible"); }
+socket.on("file-transfer-error", ({ error }) => {
+    toast(`Transfer error: ${error}`, "error");
+});
+
+// ── Receive progress UI ───────────────────────────────────
+function showReceiveProgress(transferId, fileName) {
+    let bar = document.getElementById("recv-" + transferId);
+    if (!bar) {
+        bar = document.createElement("div");
+        bar.id = "recv-" + transferId;
+        bar.style.cssText = `
+            position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+            background:var(--surface2); border:1px solid rgba(0,255,212,0.3);
+            border-radius:14px; padding:12px 18px; z-index:9998;
+            min-width:260px; max-width:90vw;
+            box-shadow:0 8px 32px rgba(0,0,0,0.5);
+        `;
+        bar.innerHTML = `
+            <div style="font-size:12px;color:var(--accent3);margin-bottom:6px;
+                        font-family:'Syne',sans-serif;font-weight:600;">
+                📥 ${fileName}
+            </div>
+            <div style="height:4px;background:var(--surface);border-radius:100px;overflow:hidden;">
+                <div id="recv-bar-${transferId}"
+                     style="height:100%;width:0%;
+                            background:linear-gradient(90deg,#00b4ff,#00ffd4);
+                            border-radius:100px;transition:width 0.15s;">
+                </div>
+            </div>
+            <div id="recv-pct-${transferId}"
+                 style="font-size:10px;color:var(--text-muted);margin-top:5px;text-align:right;">
+                0%
+            </div>
+        `;
+        document.body.appendChild(bar);
+    }
 }
 
+function updateReceiveProgress(transferId, pct) {
+    const barEl = document.getElementById("recv-bar-" + transferId);
+    const pctEl = document.getElementById("recv-pct-" + transferId);
+    if (barEl) barEl.style.width = pct + "%";
+    if (pctEl) pctEl.innerText = pct + "%";
+}
+
+function clearReceiveProgress(transferId) {
+    const el = document.getElementById("recv-" + transferId);
+    if (el) el.remove();
+}
+
+function triggerDownload(url, fileName) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+        document.body.removeChild(a);
+        if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+    }, 1000);
+}
+
+// ── Send files via socket chunks ──────────────────────────
+async function uploadFile() {
+    const files = Array.from(document.getElementById("fileInput").files);
+    if (!files.length) { toast("Select at least one file", "error"); return; }
+    if (!currentSessionId) { toast("Join or create a session first", "error"); return; }
+    if (isOwner && selectedTargets.size === 0) {
+        toast("Select at least one device to send to", "error"); return;
+    }
+
+    // Resolve targets
+    let targets;
+    if (isOwner) {
+        targets = Array.from(selectedTargets);
+    } else {
+        targets = await resolveOwnerTarget();
+        if (!targets || targets.length === 0) {
+            toast("Could not find session owner — are they still connected?", "error");
+            return;
+        }
+    }
+
+    // Send files one by one
+    for (const file of files) {
+        await sendFileViaChunks(file, targets);
+    }
+
+    // Clear UI after all done
+    document.getElementById("selectedFile").classList.remove("visible");
+    const chips = document.getElementById("fileChips");
+    if (chips) chips.innerHTML = "";
+    document.getElementById("fileInput").value = "";
+}
+
+// Guest resolves owner socketId from session info
+async function resolveOwnerTarget() {
+    try {
+        const data = await fetch(`${SERVER}/api/sessions/${currentSessionId}`).then(r => r.json());
+        return data.ownerSocketId ? [data.ownerSocketId] : [];
+    } catch(e) { return []; }
+}
+
+async function sendFileViaChunks(file, targets) {
+    const transferId  = Math.random().toString(36).slice(2) + Date.now();
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+    const sp = document.getElementById("uploadSpinner");
+    const pw = document.getElementById("progressWrap");
+    const pb = document.getElementById("progressBar");
+    sp.classList.add("visible");
+    pw.classList.add("visible");
+    pb.style.width = "0%";
+
+    return new Promise((resolve, reject) => {
+
+        // Step 1 — announce the transfer
+        socket.emit("file-transfer-start", {
+            transferId,
+            fileName:    file.name,
+            fileSize:    file.size,
+            totalChunks,
+            targets
+        });
+
+        // Step 2 — wait for server ready signal
+        const onReady = async ({ transferId: tid }) => {
+            if (tid !== transferId) return;
+            socket.off("file-transfer-ready", onReady);
+
+            let chunksDone = 0;
+            const PIPELINE = 4; // chunks in-flight at once
+            let nextSend   = 0;
+            let pending    = 0;
+
+            // Send one chunk
+            const sendChunk = async (index) => {
+                const start  = index * CHUNK_SIZE;
+                const end    = Math.min(start + CHUNK_SIZE, file.size);
+                const buffer = await file.slice(start, end).arrayBuffer();
+                socket.emit("file-chunk", { transferId, chunkIndex: index, chunk: buffer });
+            };
+
+            // Keep pipeline full
+            const pump = async () => {
+                while (nextSend < totalChunks && pending < PIPELINE) {
+                    await sendChunk(nextSend);
+                    nextSend++;
+                    pending++;
+                }
+            };
+
+            // Step 3 — listen for acks and keep pumping
+            const onAck = async ({ transferId: tid }) => {
+                if (tid !== transferId) return;
+                pending--;
+                chunksDone++;
+                // Update progress bar
+                pb.style.width = Math.min(Math.round((chunksDone / totalChunks) * 95), 95) + "%";
+                if (chunksDone < totalChunks) {
+                    await pump();
+                }
+            };
+            socket.on("chunk-ack", onAck);
+
+            // Step 4 — wait for done confirmation
+            const onDone = ({ transferId: tid }) => {
+                if (tid !== transferId) return;
+                socket.off("chunk-ack", onAck);
+                socket.off("file-transfer-done", onDone);
+                pb.style.width = "100%";
+                setTimeout(() => {
+                    pw.classList.remove("visible");
+                    pb.style.width = "0%";
+                    sp.classList.remove("visible");
+                }, 400);
+                toast(`✅ ${file.name} sent!`, "success");
+                resolve();
+            };
+            socket.on("file-transfer-done", onDone);
+
+            // Start the pipeline
+            await pump();
+        };
+
+        socket.on("file-transfer-ready", onReady);
+
+        // Timeout safety — if no response in 30s, abort
+        setTimeout(() => {
+            socket.off("file-transfer-ready", onReady);
+            sp.classList.remove("visible");
+            pw.classList.remove("visible");
+            toast("Transfer timed out — check connection", "error");
+            reject(new Error("Transfer timeout"));
+        }, 30000);
+    });
+}
+
+// ══════════════════════════════════════════════════════════
+//  LOAD FILES (session folder + inbox merged)
+// ══════════════════════════════════════════════════════════
 async function loadFiles() {
-    if(!currentSessionId&&!mySocketId) return;
-    const list=document.getElementById("fileList"),empty=document.getElementById("filesEmpty");
-    list.innerHTML="";
-    const [sessionFiles,inboxFiles]=await Promise.all([
-        currentSessionId ? fetch(`${SERVER}/api/files/list/${currentSessionId}`).then(r=>r.json()).catch(()=>[]) : Promise.resolve([]),
-        mySocketId       ? fetch(`${SERVER}/api/files/inbox/${mySocketId}`).then(r=>r.json()).catch(()=>[])       : Promise.resolve([])
+    if (!currentSessionId && !mySocketId) return;
+    const list  = document.getElementById("fileList");
+    const empty = document.getElementById("filesEmpty");
+    list.innerHTML = "";
+
+    const [sessionFiles, inboxFiles] = await Promise.all([
+        currentSessionId
+            ? fetch(`${SERVER}/api/files/list/${currentSessionId}`).then(r => r.json()).catch(() => [])
+            : Promise.resolve([]),
+        mySocketId
+            ? fetch(`${SERVER}/api/files/inbox/${mySocketId}`).then(r => r.json()).catch(() => [])
+            : Promise.resolve([])
     ]);
-    const allFiles=[...sessionFiles.map(f=>({...f,source:"session"})),...inboxFiles.map(f=>({name:f.name,url:`/api/files/download/${f.path}`,source:"inbox"}))];
-    if(!allFiles.length){empty.style.display="block";return;}
-    empty.style.display="none";
-    allFiles.forEach((file,i)=>{
-        const isInbox=file.source==="inbox";
-        const li=document.createElement("li"); li.className="file-item"; li.style.animationDelay=(i*0.05)+"s";
-        if(isInbox) li.style.borderLeft="2px solid rgba(0,255,212,0.4)";
-        li.innerHTML=`<div class="file-icon-wrap">${fileEmoji(file.name)}</div><div class="file-info"><div class="file-name">${isInbox?"📥 ":""}${file.name}</div>${isInbox?'<div style="font-size:10px;color:var(--accent3);margin-top:2px;letter-spacing:0.5px;">RECEIVED</div>':""}</div><a class="file-download" href="${SERVER}${file.url}" target="_blank">↓ Download</a>`;
+
+    const allFiles = [
+        ...sessionFiles.map(f => ({ ...f, source: "session" })),
+        ...inboxFiles.map(f  => ({ name: f.name, url: `/api/files/download/${f.path}`, source: "inbox" }))
+    ];
+
+    if (!allFiles.length) { empty.style.display = "block"; return; }
+    empty.style.display = "none";
+
+    allFiles.forEach((file, i) => {
+        const isInbox = file.source === "inbox";
+        const li = document.createElement("li");
+        li.className = "file-item";
+        li.style.animationDelay = (i * 0.05) + "s";
+        if (isInbox) li.style.borderLeft = "2px solid rgba(0,255,212,0.4)";
+        li.innerHTML = `
+            <div class="file-icon-wrap">${fileEmoji(file.name)}</div>
+            <div class="file-info">
+                <div class="file-name">${isInbox ? "📥 " : ""}${file.name}</div>
+                ${isInbox ? '<div style="font-size:10px;color:var(--accent3);margin-top:2px;letter-spacing:0.5px;">RECEIVED</div>' : ""}
+            </div>
+            <a class="file-download" href="${SERVER}${file.url}" target="_blank">↓ Download</a>
+        `;
         list.appendChild(li);
     });
 }
 
+// ══════════════════════════════════════════════════════════
+//  DEVICE LIST (owner only)
+// ══════════════════════════════════════════════════════════
 function updateDeviceList(devices) {
-    const list=document.getElementById("deviceList"),empty=document.getElementById("devicesEmpty"),countEl=document.getElementById("deviceCount");
-    selectedTargets.clear(); updateSelectedCount();
-    countEl.innerText=devices.length; list.innerHTML="";
-    if(!devices.length){empty.style.display="block";return;}
-    empty.style.display="none";
-    devices.forEach((d,i)=>{
-        const li=document.createElement("li"); li.className="device-item"; li.style.animationDelay=(i*0.05)+"s"; li.dataset.socketId=d.socketId;
-        const btn=document.createElement("button"); btn.className="btn-ghost btn"; btn.innerText="Select"; btn.style.marginLeft="auto"; btn.style.flexShrink="0";
-        btn.addEventListener("click",()=>{
-            if(selectedTargets.has(d.socketId)){selectedTargets.delete(d.socketId);btn.innerText="Select";btn.style.background="";btn.style.color="";li.style.borderColor="";}
-            else{selectedTargets.add(d.socketId);btn.innerText="✓ Selected";btn.style.background="rgba(0,255,212,0.15)";btn.style.color="#00ffd4";btn.style.borderColor="rgba(0,255,212,0.4)";li.style.borderColor="rgba(0,255,212,0.25)";}
+    const list    = document.getElementById("deviceList");
+    const empty   = document.getElementById("devicesEmpty");
+    const countEl = document.getElementById("deviceCount");
+
+    selectedTargets.clear();
+    updateSelectedCount();
+    countEl.innerText = devices.length;
+    list.innerHTML = "";
+
+    if (!devices.length) { empty.style.display = "block"; return; }
+    empty.style.display = "none";
+
+    devices.forEach((d, i) => {
+        const li  = document.createElement("li");
+        li.className = "device-item";
+        li.style.animationDelay = (i * 0.05) + "s";
+        li.dataset.socketId = d.socketId;
+
+        const btn = document.createElement("button");
+        btn.className = "btn-ghost btn";
+        btn.innerText = "Select";
+        btn.style.marginLeft = "auto";
+        btn.style.flexShrink = "0";
+
+        btn.addEventListener("click", () => {
+            if (selectedTargets.has(d.socketId)) {
+                selectedTargets.delete(d.socketId);
+                btn.innerText = "Select";
+                btn.style.background = "";
+                btn.style.color = "";
+                li.style.borderColor = "";
+            } else {
+                selectedTargets.add(d.socketId);
+                btn.innerText = "✓ Selected";
+                btn.style.background = "rgba(0,255,212,0.15)";
+                btn.style.color = "#00ffd4";
+                btn.style.borderColor = "rgba(0,255,212,0.4)";
+                li.style.borderColor = "rgba(0,255,212,0.25)";
+            }
             updateSelectedCount();
         });
-        li.innerHTML=`<div class="device-avatar">${d.name.charAt(0).toUpperCase()}</div><span style="flex:1;font-size:13px;color:var(--text-dim)">${d.name}</span>`;
-        li.appendChild(btn); list.appendChild(li);
+
+        li.innerHTML = `
+            <div class="device-avatar">${d.name.charAt(0).toUpperCase()}</div>
+            <span style="flex:1;font-size:13px;color:var(--text-dim)">${d.name}</span>
+        `;
+        li.appendChild(btn);
+        list.appendChild(li);
     });
 }
-function updateSelectedCount() { const el=document.getElementById("selectedCount"); if(el) el.innerText=selectedTargets.size; }
-function getDeviceName() {
-    const s=localStorage.getItem("deviceName"); if(s) return s;
-    const n=(navigator.userAgent.includes("Mobile")?"📱 Mobile":"💻 Desktop")+" "+Math.floor(Math.random()*1000);
-    localStorage.setItem("deviceName",n); return n;
+
+function updateSelectedCount() {
+    const el = document.getElementById("selectedCount");
+    if (el) el.innerText = selectedTargets.size;
 }
 
 // ══════════════════════════════════════════════════════════
 //  OS TRANSFER
 // ══════════════════════════════════════════════════════════
-let osTransferCode   = null;
-let osSelectedFiles  = [];
-let osCurrentCode    = null;  // code being received
+let osTransferCode  = null;
+let osSelectedFiles = [];
+let osCurrentCode   = null;
 
-function openOsModal()  { document.getElementById("osModal").classList.add("open"); document.body.style.overflow="hidden"; }
-function closeOsModal(e){ if(e&&e.target!==document.getElementById("osModal")) return; document.getElementById("osModal").classList.remove("open"); document.body.style.overflow=""; }
-
+function openOsModal()  {
+    document.getElementById("osModal").classList.add("open");
+    document.body.style.overflow = "hidden";
+}
+function closeOsModal(e) {
+    if (e && e.target !== document.getElementById("osModal")) return;
+    document.getElementById("osModal").classList.remove("open");
+    document.body.style.overflow = "";
+}
 function switchOsTab(tab, el) {
-    document.querySelectorAll(".os-tab").forEach(t=>t.classList.remove("active"));
-    document.querySelectorAll(".os-panel").forEach(p=>p.classList.remove("active"));
+    document.querySelectorAll(".os-tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".os-panel").forEach(p => p.classList.remove("active"));
     el.classList.add("active");
     document.getElementById(`os-${tab}-panel`).classList.add("active");
 }
 
-// ── Send side ──────────────────────────────────────────────
 function onOsFilesSelected(e) {
     osSelectedFiles = Array.from(e.target.files);
     renderOsQueuedFiles();
@@ -835,39 +1163,38 @@ function renderOsQueuedFiles() {
     osSelectedFiles.forEach(f => {
         const div = document.createElement("div");
         div.className = "os-queued-item";
-        div.innerHTML = `<span>${fileEmoji(f.name)}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</span><span style="font-size:10px;color:var(--text-muted)">${(f.size/1024/1024).toFixed(1)}MB</span>`;
+        div.innerHTML = `
+            <span>${fileEmoji(f.name)}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</span>
+            <span style="font-size:10px;color:var(--text-muted)">${(f.size/1024/1024).toFixed(1)}MB</span>
+        `;
         container.appendChild(div);
     });
 }
 
 async function createOsTransfer() {
-    if (osSelectedFiles.length === 0) { toast("Add files first","error"); return; }
-    const sp = document.getElementById("osQueueSpinner"); sp.classList.add("visible");
+    if (osSelectedFiles.length === 0) { toast("Add files first", "error"); return; }
+    const sp = document.getElementById("osQueueSpinner");
+    sp.classList.add("visible");
     document.getElementById("osQueueBtn").disabled = true;
 
     try {
-        // 1 — create queue, get code
-        const createRes = await fetch(`${SERVER}/api/files/os-transfer/create`, {method:"POST"}).then(r=>r.json());
-        if (createRes.error) { toast(createRes.error,"error"); return; }
+        const createRes = await fetch(`${SERVER}/api/files/os-transfer/create`, { method: "POST" }).then(r => r.json());
+        if (createRes.error) { toast(createRes.error, "error"); return; }
         osTransferCode = createRes.code;
 
-        // 2 — upload all files to the queue
         const fd = new FormData();
         fd.append("code", osTransferCode);
         osSelectedFiles.forEach(f => fd.append("files", f));
 
-        const sendRes = await fetch(`${SERVER}/api/files/os-transfer/send`, {method:"POST",body:fd}).then(r=>r.json());
-        if (sendRes.error) { toast(sendRes.error,"error"); return; }
+        const sendRes = await fetch(`${SERVER}/api/files/os-transfer/send`, { method: "POST", body: fd }).then(r => r.json());
+        if (sendRes.error) { toast(sendRes.error, "error"); return; }
 
-        // 3 — show code
         document.getElementById("osCodeDisplay").innerText = osTransferCode;
         document.getElementById("osCodeWrap").style.display = "block";
         toast(`${osSelectedFiles.length} file(s) queued — code: ${osTransferCode}`, "success");
-
-        // 4 — poll for claimed status
         pollOsSendStatus(osTransferCode);
-
-    } catch(e) { toast("Queue failed","error"); }
+    } catch(e) { toast("Queue failed", "error"); }
     finally { sp.classList.remove("visible"); }
 }
 
@@ -875,18 +1202,17 @@ function pollOsSendStatus(code) {
     const statusEl = document.getElementById("osSendStatus");
     const iv = setInterval(async () => {
         try {
-            const data = await fetch(`${SERVER}/api/files/os-transfer/status/${code}`).then(r=>r.json());
+            const data = await fetch(`${SERVER}/api/files/os-transfer/status/${code}`).then(r => r.json());
             if (data.claimed) {
                 clearInterval(iv);
-                statusEl.className="os-status claimed";
-                statusEl.innerHTML="<span>✅</span> Files claimed by the other OS!";
-                toast("Other OS claimed your files!","success");
+                statusEl.className = "os-status claimed";
+                statusEl.innerHTML = "<span>✅</span> Files claimed by the other OS!";
+                toast("Other OS claimed your files!", "success");
             }
         } catch(e) { clearInterval(iv); }
     }, 4000);
 }
 
-// ── Receive side ───────────────────────────────────────────
 function onOsCodeInput() {
     const val = document.getElementById("osReceiveCode").value;
     document.getElementById("osCheckBtn").disabled = val.length !== 6;
@@ -895,18 +1221,18 @@ function onOsCodeInput() {
 
 async function checkOsQueue() {
     const code = document.getElementById("osReceiveCode").value.trim();
-    if (code.length !== 6) { toast("Enter a 6-digit code","error"); return; }
-    const sp = document.getElementById("osCheckSpinner"); sp.classList.add("visible");
-
+    if (code.length !== 6) { toast("Enter a 6-digit code", "error"); return; }
+    const sp = document.getElementById("osCheckSpinner");
+    sp.classList.add("visible");
     try {
-        const data = await fetch(`${SERVER}/api/files/os-transfer/status/${code}`).then(r=>r.json());
-        if (data.error) { toast(data.error,"error"); return; }
-        if (data.claimed) { toast("This transfer has already been claimed","error"); return; }
-        if (data.fileCount === 0) { toast("No files queued yet — try again in a moment","info"); return; }
+        const data = await fetch(`${SERVER}/api/files/os-transfer/status/${code}`).then(r => r.json());
+        if (data.error)   { toast(data.error, "error"); return; }
+        if (data.claimed) { toast("This transfer has already been claimed", "error"); return; }
+        if (data.fileCount === 0) { toast("No files queued yet — try again shortly", "info"); return; }
 
         osCurrentCode = code;
-        const statusEl  = document.getElementById("osReceiveStatus");
-        const infoEl    = document.getElementById("osReceiveInfo");
+        const statusEl   = document.getElementById("osReceiveStatus");
+        const infoEl     = document.getElementById("osReceiveInfo");
         const fileListEl = document.getElementById("osReceiveFileList");
 
         infoEl.className = "os-status ready";
@@ -914,22 +1240,30 @@ async function checkOsQueue() {
 
         fileListEl.innerHTML = "";
         data.files.forEach(f => {
-            const div = document.createElement("div"); div.className = "os-queued-item";
-            div.innerHTML = `<span>${fileEmoji(f.name)}</span><span style="flex:1">${f.name}</span><span style="font-size:10px;color:var(--text-muted)">${(f.size/1024/1024).toFixed(1)}MB</span>`;
+            const div = document.createElement("div");
+            div.className = "os-queued-item";
+            div.innerHTML = `
+                <span>${fileEmoji(f.name)}</span>
+                <span style="flex:1">${f.name}</span>
+                <span style="font-size:10px;color:var(--text-muted)">${(f.size/1024/1024).toFixed(1)}MB</span>
+            `;
             fileListEl.appendChild(div);
         });
 
         statusEl.style.display = "block";
-    } catch(e) { toast("Failed to check code","error"); }
+    } catch(e) { toast("Failed to check code", "error"); }
     finally { sp.classList.remove("visible"); }
 }
 
 function claimOsFiles() {
     if (!osCurrentCode) return;
-    // Navigate directly to the claim endpoint — browser handles the download
     window.location.href = `${SERVER}/api/files/os-transfer/claim/${osCurrentCode}`;
-    toast("Download started!","success");
-    setTimeout(() => { document.getElementById("osReceiveStatus").style.display="none"; document.getElementById("osReceiveCode").value=""; osCurrentCode=null; }, 1500);
+    toast("Download started!", "success");
+    setTimeout(() => {
+        document.getElementById("osReceiveStatus").style.display = "none";
+        document.getElementById("osReceiveCode").value = "";
+        osCurrentCode = null;
+    }, 1500);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -949,41 +1283,32 @@ if ("serviceWorker" in navigator) {
     });
 }
 
-// ── Push notification subscription ──
 async function subscribeToPush() {
     if (!swRegistration || !("PushManager" in window)) return;
-
     try {
         let sub = await swRegistration.pushManager.getSubscription();
-
         if (!sub) {
             const { publicKey } = await fetch(`${SERVER}/api/push/vapid-key`).then(r => r.json());
             if (!publicKey) return;
-
             const permission = await Notification.requestPermission();
             if (permission !== "granted") return;
-
             sub = await swRegistration.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array(publicKey)
             });
         }
-
         const waitForSocket = () => new Promise(resolve => {
             if (mySocketId) return resolve(mySocketId);
             const check = setInterval(() => {
                 if (mySocketId) { clearInterval(check); resolve(mySocketId); }
             }, 200);
         });
-
         const socketId = await waitForSocket();
-
         await fetch(`${SERVER}/api/push/subscribe`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ socketId, subscription: sub.toJSON() })
         });
-
         console.log("[Push] Subscribed successfully");
     } catch(e) {
         console.log("[Push] Subscription skipped:", e.message);
@@ -997,10 +1322,10 @@ function urlBase64ToUint8Array(base64String) {
     return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
 }
 
-// ── Install prompt ──
 let deferredPrompt = null;
 window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault(); deferredPrompt = e;
+    e.preventDefault();
+    deferredPrompt = e;
     document.getElementById("installBtn").style.display = "flex";
 });
 window.addEventListener("appinstalled", () => {
